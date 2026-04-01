@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * DTO đại diện cho phản hồi REST chuẩn, bao gồm mã trạng thái, lỗi (nếu có), thông báo và dữ liệu.
+ */
 public class RestResponse<T> {
     private int statusCode;
     private String error;

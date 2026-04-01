@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+/**
+ * DTO chứa thông tin thông báo thay đổi trạng thái ghế ngồi (WebSocket), dùng để cập nhật thời gian thực.
+ */
 public class SeatStatusMessageDto {
     private Integer seatId;
     private Integer showtimeId;

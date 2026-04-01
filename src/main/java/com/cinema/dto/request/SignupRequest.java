@@ -8,6 +8,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
+/**
+ * DTO chứa yêu cầu đăng ký tài khoản mới, bao gồm email, mật khẩu và họ tên.
+ */
 public class SignupRequest {
     @NotBlank
     @Size(max = 100)
@@ -17,6 +20,10 @@ public class SignupRequest {
     @NotBlank
     @Size(min = 6, max = 40)
     private String password;
+
+    @NotBlank
+    @Size(min = 6, max = 40)
+    private String confirmPassword;
 
     @NotBlank
     @Size(max = 100)
