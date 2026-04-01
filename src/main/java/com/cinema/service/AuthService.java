@@ -73,12 +73,17 @@ public class AuthService {
                 .build();
         refreshTokenRepository.save(refreshToken);
 
-        return new TokenResponse(jwt,
-                refreshTokenString,
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getFullName(),
-                roles);
+        return TokenResponse.builder()
+                .accessToken(jwt)
+                .refreshToken(refreshTokenString)
+                .user(TokenResponse.UserInfo.builder()
+                        .id(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .avatarUrl(user.getAvatarUrl())
+                        .role(user.getRole().name())
+                        .build())
+                .build();
     }
 
     public String registerUser(SignupRequest signUpRequest) {
@@ -117,12 +122,17 @@ public class AuthService {
 
         List<String> roles = List.of(user.getRole().name());
 
-        return new TokenResponse(newAccessToken,
-                token,
-                user.getId(),
-                user.getEmail(),
-                user.getFullName(),
-                roles);
+        return TokenResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(token)
+                .user(TokenResponse.UserInfo.builder()
+                        .id(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .avatarUrl(user.getAvatarUrl())
+                        .role(user.getRole().name())
+                        .build())
+                .build();
     }
 
     @Transactional

@@ -7,6 +7,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
+/**
+ * DTO chứa yêu cầu đăng nhập của người dùng, bao gồm email và mật khẩu.
+ */
 public class LoginRequest {
     @NotBlank
     @Email
