@@ -21,7 +21,7 @@ public class Room {
     @Column(columnDefinition = "NVARCHAR(50)")
     private String name;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = com.cinema.converter.RoomTypeConverter.class)
     private RoomType type;
 
     @Column(name = "total_rows")

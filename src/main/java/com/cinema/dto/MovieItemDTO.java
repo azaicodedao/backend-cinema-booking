@@ -22,6 +22,7 @@ public class MovieItemDTO {
     private String posterUrl;
     private Integer duration;
     private Integer ageRating;
+    private String trailerUrl;
     private String status;
     private LocalDate releaseDate;
     

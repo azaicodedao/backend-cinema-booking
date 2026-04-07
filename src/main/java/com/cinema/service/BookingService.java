@@ -1,12 +1,16 @@
 package com.cinema.service;
 
-import com.cinema.dto.request.BookingRequestDto;
-import com.cinema.entity.*;
+import com.cinema.dto.BookingDetailDTO;
+import com.cinema.dto.BookingResponseDTO;
+ import com.cinema.dto.request.BookingRequestDto;
+ import com.cinema.entity.*;
 import com.cinema.repository.*;
 import com.cinema.entity.User;
 import com.cinema.repository.UserRepository;
 import com.cinema.enums.TicketStatus;
 import com.cinema.enums.BookingStatus;
+import com.cinema.dto.SeatStatusMessageDto;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -17,6 +21,10 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Dịch vụ xử lý các nghiệp vụ liên quan đến Đặt vé (Booking).
+ * Quản lý luồng tạo đơn hàng, thanh toán và thông báo trạng thái ghế qua WebSocket.
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -27,8 +35,14 @@ public class BookingService {
     SeatRepository seatRepository;
     TicketRepository ticketRepository;
     UserRepository userRepository;
-    SeatHoldingService SeatHoldingService;
+    SeatHoldingService seatHoldingService;
+    ReviewRepository reviewRepository;
+    SimpMessagingTemplate messagingTemplate; // Tiêm WebSocket template để gửi thông báo thời gian thực
 
+    /**
+     * Tạo đơn đặt vé mới.
+     * Kiểm tra trạng thái giữ chỗ của các ghế trước khi tạo Booking và Ticket.
+     */
     @Transactional
     public Booking createBooking(BookingRequestDto request, Integer userId) {
         User user = userRepository.findById(userId)
@@ -43,11 +57,39 @@ public class BookingService {
             throw new IllegalArgumentException("Seats do not belong to the correct room.");
         }
 
-        if (!SeatHoldingService.areSeatsHeldByUser(request.getSeatIds(), request.getShowtimeId(), userId)) {
+        // --- Bước 1: Kiểm tra quyền giữ ghế (Bao gồm cả ghế từ đơn hàng PENDING cũ) ---
+        // Gọi instance của service thay vì gọi tĩnh thông qua Class
+        if (!seatHoldingService.areSeatsHeldByUser(request.getSeatIds(), request.getShowtimeId(), userId)) {
             throw new IllegalArgumentException("You must hold all selected seats before booking. Please select seats first.");
         }
 
-        BigDecimal totalPrice = showtime.getPrice().multiply(BigDecimal.valueOf(seats.size()));
+        // --- Bước 2: Tự động hủy các đơn hàng PENDING cũ của người dùng này cho cùng suất chiếu ---
+        // Điều này cho phép người dùng "quay lại và chọn lại ghế" mà không bị kẹt bởi đơn hàng cũ.
+        // Thực hiện SAU KHI kiểm tra areSeatsHeldByUser để đảm bảo tính hợp lệ.
+        List<Booking> oldPendingBookings = bookingRepository.findByShowtimeId(request.getShowtimeId()).stream()
+                .filter(b -> b.getUser().getId().equals(userId) && b.getStatus() == BookingStatus.PENDING)
+                .toList();
+        for (Booking oldBooking : oldPendingBookings) {
+            oldBooking.setStatus(BookingStatus.CANCELLED);
+            bookingRepository.save(oldBooking);
+
+            // --- THÔNG BÁO WEBSOCKET: Ghế của đơn hàng bị hủy trở lại trạng thái TRỐNG ---
+            List<Ticket> oldTickets = ticketRepository.findByBooking(oldBooking);
+            for (Ticket t : oldTickets) {
+                messagingTemplate.convertAndSend("/topic/showtime/" + request.getShowtimeId(), 
+                    SeatStatusMessageDto.builder()
+                        .seatId(t.getSeat().getId())
+                        .showtimeId(request.getShowtimeId())
+                        .status("AVAILABLE")
+                        .rowLetter(t.getSeat().getRowLabel())
+                        .seatNumber(t.getSeat().getColNumber())
+                        .build());
+            }
+        }
+
+        // Kiểm tra giá Suất chiếu (null safety)
+        BigDecimal unitPrice = showtime.getPrice() != null ? showtime.getPrice() : BigDecimal.ZERO;
+        BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(seats.size()));
 
         Booking booking = new Booking();
         booking.setBookingCode("BKG" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
@@ -63,11 +105,26 @@ public class BookingService {
             ticket.setBooking(savedBooking);
             ticket.setSeat(seat);
             ticket.setQrCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            ticket.setStatus(TicketStatus.VALID); // changed from BOOKED if using TicketStatus
+            ticket.setStatus(TicketStatus.VALID); 
+            ticket.setPrice(unitPrice); // Gán giá tiền cho từng vé
             ticketRepository.save(ticket);
         }
 
-        SeatHoldingService.convertHoldsToBooked(request.getSeatIds(), request.getShowtimeId());
+        // Chuyển trạng thái giữ chỗ sang Đang giữ (PENDING booking)
+        seatHoldingService.convertHoldsToBooked(request.getSeatIds(), request.getShowtimeId());
+
+        // --- THÔNG BÁO WEBSOCKET: Ghế hiện tại chuyển sang trạng thái HOLDING (đang chờ thanh toán) ---
+        for (Seat seat : seats) {
+            messagingTemplate.convertAndSend("/topic/showtime/" + request.getShowtimeId(), 
+                SeatStatusMessageDto.builder()
+                    .seatId(seat.getId())
+                    .showtimeId(request.getShowtimeId())
+                    .status("HOLDING")
+                    .holdByUserId(userId)
+                    .rowLetter(seat.getRowLabel())
+                    .seatNumber(seat.getColNumber())
+                    .build());
+        }
 
         return savedBooking;
     }
@@ -86,8 +143,115 @@ public class BookingService {
 
         List<Ticket> tickets = ticketRepository.findByBooking(booking);
         for (Ticket t : tickets) {
-            t.setStatus(TicketStatus.VALID);
-            ticketRepository.save(t);
-        }
+             t.setStatus(TicketStatus.VALID);
+             ticketRepository.save(t);
+
+             // --- THÔNG BÁO WEBSOCKET: Ghế chuyển sang trạng thái ĐÃ ĐẶT (BOOKED) ---
+             messagingTemplate.convertAndSend("/topic/showtime/" + booking.getShowtime().getId(), 
+                SeatStatusMessageDto.builder()
+                    .seatId(t.getSeat().getId())
+                    .showtimeId(booking.getShowtime().getId())
+                    .status("BOOKED")
+                    .rowLetter(t.getSeat().getRowLabel())
+                    .seatNumber(t.getSeat().getColNumber())
+                    .build());
+         }
+     }
+ 
+    @Transactional(readOnly = true)
+    public BookingResponseDTO getBookingSummary(Integer bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        List<Ticket> tickets = ticketRepository.findByBooking(booking);
+        List<String> seatLabels = tickets.stream()
+                .map(t -> t.getSeat().getRowLabel() + t.getSeat().getColNumber())
+                .toList();
+
+        long elapsedSeconds = java.time.Duration.between(booking.getCreatedAt(), java.time.LocalDateTime.now()).getSeconds();
+        int remainingSeconds = Math.max(0, 600 - (int) elapsedSeconds);
+
+        return BookingResponseDTO.builder()
+                .bookingId(booking.getId())
+                .bookingCode(booking.getBookingCode())
+                .movieTitle(booking.getShowtime().getMovie().getTitle())
+                .roomName(booking.getShowtime().getRoom().getName())
+                .showtimeStart(booking.getShowtime().getStartTime())
+                .seatLabels(seatLabels)
+                .totalPrice(booking.getTotalPrice().doubleValue())
+                .status(booking.getStatus().name())
+                .createdAt(booking.getCreatedAt())
+                .paymentCountdownSeconds(remainingSeconds)
+                .numberOfTickets(tickets.size())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public BookingDetailDTO getBookingDetail(Integer bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        List<Ticket> tickets = ticketRepository.findByBooking(booking);
+        List<String> seatLabels = tickets.stream()
+                .map(t -> t.getSeat().getRowLabel() + t.getSeat().getColNumber())
+                .toList();
+
+        List<BookingDetailDTO.TicketInfo> ticketInfos = tickets.stream()
+                .map(t -> BookingDetailDTO.TicketInfo.builder()
+                        .ticketId(t.getId())
+                        .seatLabel(t.getSeat().getRowLabel() + t.getSeat().getColNumber())
+                        .seatType(t.getSeat().getSeatType().name())
+                        .qrCode(t.getQrCode())
+                        .build())
+                .toList();
+
+        return BookingDetailDTO.builder()
+                .bookingId(booking.getId())
+                .movieId(booking.getShowtime().getMovie().getId())
+                .bookingCode(booking.getBookingCode())
+                .movieTitle(booking.getShowtime().getMovie().getTitle())
+                .posterUrl(booking.getShowtime().getMovie().getPosterUrl())
+                .roomName(booking.getShowtime().getRoom().getName())
+                .showtimeStart(booking.getShowtime().getStartTime())
+                .seatLabels(seatLabels)
+                .numberOfTickets(tickets.size())
+                .totalPrice(booking.getTotalPrice().doubleValue())
+                .status(booking.getStatus().name())
+                .createdAt(booking.getCreatedAt())
+                .tickets(ticketInfos)
+                .customerName(booking.getUser().getFullName())
+                .hasReviewed(reviewRepository.existsByBookingId(booking.getId()))
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponseDTO> getUserBookings(Integer userId) {
+        List<Booking> bookings = bookingRepository.findByUserId(userId);
+        
+        return bookings.stream().map(booking -> {
+            List<Ticket> tickets = ticketRepository.findByBooking(booking);
+            List<String> seatLabels = tickets.stream()
+                    .map(t -> t.getSeat().getRowLabel() + t.getSeat().getColNumber())
+                    .toList();
+
+            long elapsedSeconds = java.time.Duration.between(booking.getCreatedAt(), java.time.LocalDateTime.now()).getSeconds();
+            int remainingSeconds = Math.max(0, 600 - (int) elapsedSeconds);
+
+            return BookingResponseDTO.builder()
+                    .bookingId(booking.getId())
+                    .movieId(booking.getShowtime().getMovie().getId())
+                    .bookingCode(booking.getBookingCode())
+                    .movieTitle(booking.getShowtime().getMovie().getTitle())
+                    .roomName(booking.getShowtime().getRoom().getName())
+                    .showtimeStart(booking.getShowtime().getStartTime())
+                    .seatLabels(seatLabels)
+                    .totalPrice(booking.getTotalPrice().doubleValue())
+                    .status(booking.getStatus().name())
+                    .createdAt(booking.getCreatedAt())
+                    .paymentCountdownSeconds(remainingSeconds)
+                    .numberOfTickets(tickets.size())
+                    .hasReviewed(reviewRepository.existsByBookingId(booking.getId()))
+                    .build();
+        }).toList();
     }
 }

@@ -8,11 +8,13 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class GenreService {
@@ -26,12 +28,14 @@ public class GenreService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public GenreDto createGenre(GenreDto GenreDto) {
         Genre Genre = GenreMapper.toEntity(GenreDto);
         Genre saved = GenreRepository.save(Genre);
         return GenreMapper.toDto(saved);
     }
 
+    @Transactional
     public GenreDto updateGenre(Integer id, GenreDto GenreDto) {
         Genre Genre = GenreRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Genre not found"));

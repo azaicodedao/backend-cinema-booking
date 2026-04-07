@@ -17,6 +17,7 @@ import java.util.List;
  */
 public class BookingDetailDTO {
     private Integer bookingId;
+    private Integer movieId;
     private String bookingCode;
     private String movieTitle;
     private String posterUrl;
@@ -28,6 +29,7 @@ public class BookingDetailDTO {
     private String status;
     private LocalDateTime createdAt;
     private Boolean hasReviewed;
+    private String customerName;
     private List<TicketInfo> tickets;
 
     @Data

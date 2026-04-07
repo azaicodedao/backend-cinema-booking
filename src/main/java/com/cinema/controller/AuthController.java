@@ -6,10 +6,14 @@ import com.cinema.dto.request.SignupRequest;
 import com.cinema.dto.request.TokenRefreshRequest;
 import com.cinema.dto.response.TokenResponse;
 import com.cinema.service.AuthService;
+import com.cinema.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -25,6 +29,9 @@ public class AuthController {
         try {
             TokenResponse tokenResponse = authService.authenticateUser(loginRequest);
             return ResponseEntity.ok().body(RestResponse.success(tokenResponse, "Login successfully"));
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(RestResponse.error(401, "Unauthorized", "Email hoặc mật khẩu không chính xác."));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(RestResponse.error(400, "Bad Request", e.getMessage()));
@@ -59,12 +66,15 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<RestResponse<Void>> logoutUser() {
         try {
-            // Usually we'd get the current user ID from the context
-            // authService.logout(getCurrentUserId());
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+                authService.logout(userDetails.getId());
+            }
             return ResponseEntity.ok(RestResponse.<Void>success(null, "Log out successful"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(RestResponse.error(500, "Error", "Could not log out"));
+                    .body(RestResponse.error(500, "Error", "Could not log out: " + e.getMessage()));
         }
     }
 }

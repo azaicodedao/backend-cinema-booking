@@ -17,9 +17,10 @@ public class MovieDto {
     private String title;
     private String description;
     private Integer duration;
-    private Integer ageLimit;
+    private Integer ageRating;
     private String posterUrl;
-    private boolean isActive;
+    private String trailerUrl;
+    private Boolean isFeatured;
     private String status;
-    private List<GenreDto> Genres;
+    private List<GenreDto> genres;
 }

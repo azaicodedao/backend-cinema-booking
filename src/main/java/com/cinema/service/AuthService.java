@@ -45,8 +45,9 @@ public class AuthService {
 
     @Transactional
     public TokenResponse authenticateUser(LoginRequest loginRequest) {
+        String email = loginRequest.getEmail().trim();
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+                new UsernamePasswordAuthenticationToken(email, loginRequest.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         
@@ -87,12 +88,13 @@ public class AuthService {
     }
 
     public String registerUser(SignupRequest signUpRequest) {
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+        String email = signUpRequest.getEmail().trim();
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Error: Email is already in use!");
         }
 
         User user = new User();
-        user.setEmail(signUpRequest.getEmail());
+        user.setEmail(email);
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
         user.setFullName(signUpRequest.getFullName());
         user.setStatus(UserStatus.ACTIVE);
