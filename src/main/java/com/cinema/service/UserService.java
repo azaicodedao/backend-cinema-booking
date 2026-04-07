@@ -35,6 +35,16 @@ public class UserService {
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
         }
+        if (request.getGender() != null) {
+            try {
+                user.setGender(com.cinema.enums.Gender.valueOf(request.getGender().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid gender values or handle as needed
+            }
+        }
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress());
+        }
         if (request.getAvatarUrl() != null) {
             user.setAvatarUrl(request.getAvatarUrl());
         }

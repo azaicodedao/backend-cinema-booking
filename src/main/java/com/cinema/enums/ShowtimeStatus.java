@@ -4,5 +4,7 @@ public enum ShowtimeStatus {
     SCHEDULED,
     ACTIVE,
     CANCELLED,
-    COMPLETED
+    COMPLETED,
+    OPEN,
+    FULL
 }

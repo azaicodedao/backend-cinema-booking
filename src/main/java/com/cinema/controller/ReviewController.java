@@ -1,7 +1,8 @@
 package com.cinema.controller;
 
-import com.cinema.dto.response.RestResponse;
 import com.cinema.dto.ReviewDto;
+import com.cinema.dto.ReviewSummaryDto;
+import com.cinema.dto.response.RestResponse;
 import com.cinema.security.services.UserDetailsImpl;
 import com.cinema.service.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,12 @@ public class ReviewController {
     public ResponseEntity<RestResponse<List<ReviewDto>>> getReviewsByMovie(@PathVariable Integer movieId) {
         List<ReviewDto> reviews = reviewService.getReviewsByMovie(movieId);
         return ResponseEntity.ok(RestResponse.success(reviews, "Fetched reviews successfully"));
+    }
+
+    @GetMapping("/movie/{movieId}/summary")
+    public ResponseEntity<RestResponse<ReviewSummaryDto>> getReviewSummary(@PathVariable Integer movieId) {
+        ReviewSummaryDto summary = reviewService.getMovieReviewSummary(movieId);
+        return ResponseEntity.ok(RestResponse.success(summary, "Fetched review summary successfully"));
     }
 
     @PostMapping

@@ -23,4 +23,10 @@ public class ShowtimeDto {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Double price;
+
+    // Fields added for UI convenience
+    private String timeString;
+    private String formatAndRoom;
+    private Integer availableSeats;
+    private String status;
 }

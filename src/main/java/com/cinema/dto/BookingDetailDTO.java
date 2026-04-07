@@ -13,10 +13,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 /**
- * Data Transfer Object (DTO) chứa thông tin chi tiết về một giao dịch đặt vé, bao gồm thông tin phim, phòng chiếu và danh sách vé.
+ * Data Transfer Object (DTO) chứa thông tin chi tiết về một giao dịch đặt vé,
+ * bao gồm thông tin phim, phòng chiếu và danh sách vé.
  */
 public class BookingDetailDTO {
     private Integer bookingId;
+    private Integer movieId;
     private String bookingCode;
     private String movieTitle;
     private String posterUrl;
@@ -28,6 +30,7 @@ public class BookingDetailDTO {
     private String status;
     private LocalDateTime createdAt;
     private Boolean hasReviewed;
+    private String customerName;
     private List<TicketInfo> tickets;
 
     @Data

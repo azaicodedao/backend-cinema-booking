@@ -13,7 +13,7 @@ import java.util.List;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/api/Genres")
+@RequestMapping("/api/genres")
 public class GenreController {
 
     @Autowired

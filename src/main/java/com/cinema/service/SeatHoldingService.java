@@ -14,10 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -124,6 +121,38 @@ public class SeatHoldingService {
         return message;
     }
 
+    /**
+     * Giữ nhiều ghế cùng một lúc. Thường dùng khi người dùng chọn nhiều ghế trên UI.
+     */
+    @Transactional
+    public List<SeatStatusMessageDto> holdSeats(List<Integer> seatIds, Integer showtimeId, Integer userId) {
+        List<SeatStatusMessageDto> results = new ArrayList<>();
+        for (Integer seatId : seatIds) {
+            results.add(holdSeat(seatId, showtimeId, userId));
+        }
+        return results;
+    }
+
+    /**
+     * Giải phóng nhiều ghế cùng một lúc.
+     */
+    @Transactional
+    public List<SeatStatusMessageDto> releaseSeats(List<Integer> seatIds, Integer showtimeId, Integer userId) {
+        List<SeatStatusMessageDto> results = new ArrayList<>();
+        for (Integer seatId : seatIds) {
+            results.add(releaseSeat(seatId, showtimeId, userId));
+        }
+        return results;
+    }
+
+    /**
+     * Lấy trạng thái tất cả các ghế cho một Suất chiếu.
+     * Logic:
+     * 1. Ghế đã thanh toán (CONFIRMED) -> BOOKED
+     * 2. Ghế đang trong đơn hàng chờ thanh toán (PENDING) -> HOLDING (có userId)
+     * 3. Ghế đang giữ tạm thời (seat_holdings) -> HOLDING (có userId)
+     * 4. Còn lại -> AVAILABLE
+     */
     @Transactional(readOnly = true)
     public List<SeatStatusMessageDto> getSeatsStatusForShowtime(Integer showtimeId) {
         Showtime showtime = showtimeRepository.findById(showtimeId)
@@ -131,10 +160,12 @@ public class SeatHoldingService {
 
         List<Seat> seats = seatRepository.findByRoomId(showtime.getRoom().getId());
 
+        // 1. Lấy danh sách giữ chỗ tạm thời (chưa tạo đơn hàng)
         List<SeatHolding> activeHolds = seatHoldingRepository
                 .findByShowtimeIdAndExpiredAtAfter(showtimeId, LocalDateTime.now());
 
-        Set<Integer> bookedSeatIds = getBookedSeatIdsForShowtime(showtimeId);
+        // 2. Lấy danh sách các đơn hàng cho suất chiếu này
+        List<Booking> bookings = bookingRepository.findByShowtimeId(showtimeId);
 
         List<SeatStatusMessageDto> result = new ArrayList<>();
         for (Seat seat : seats) {
@@ -144,9 +175,25 @@ public class SeatHoldingService {
                     .rowLetter(seat.getRowLabel())
                     .seatNumber(seat.getColNumber());
 
-            if (bookedSeatIds.contains(seat.getId())) {
-                builder.status("BOOKED");
+            // Tìm xem ghế này có nằm trong đơn hàng nào không
+            Optional<Booking> seatBooking = bookings.stream()
+                .filter(b -> b.getStatus() != BookingStatus.CANCELLED)
+                .filter(b -> ticketRepository.findByBooking(b).stream()
+                    .anyMatch(t -> t.getSeat().getId().equals(seat.getId())))
+                .findFirst();
+
+            if (seatBooking.isPresent()) {
+                Booking b = seatBooking.get();
+                if (b.getStatus() == BookingStatus.CONFIRMED) {
+                    builder.status("BOOKED");
+                } else {
+                    // Trạng thái PENDING -> Hiển thị là HOLDING để người dùng có thể thấy ghế của mình
+                    builder.status("HOLDING")
+                           .holdByUserId(b.getUser().getId())
+                           .expiredAt(b.getCreatedAt().plusMinutes(10)); // Giả định 10 phút thanh toán
+                }
             } else {
+                // Nếu không có đơn hàng, kiểm tra xem có giữ chỗ tạm thời không
                 Optional<SeatHolding> hold = activeHolds.stream()
                         .filter(h -> h.getSeat().getId().equals(seat.getId()))
                         .findFirst();
@@ -193,34 +240,39 @@ public class SeatHoldingService {
         }
     }
 
+    /**
+     * Kiểm tra xem người dùng có đang giữ (hold) tất cả các ghế theo yêu cầu hay không.
+     * Kiểm tra cả trong bảng SeatHolding và trong các đơn hàng PENDING của người dùng.
+     */
     public boolean areSeatsHeldByUser(List<Integer> seatIds, Integer showtimeId, Integer userId) {
+        // 1. Kiểm tra trong các bảng SeatHolding (giữ tạm thời)
         List<SeatHolding> userHolds = seatHoldingRepository.findByUserIdAndShowtimeId(userId, showtimeId);
         Set<Integer> heldSeatIds = userHolds.stream()
                 .filter(h -> h.getExpiredAt().isAfter(LocalDateTime.now()))
                 .map(h -> h.getSeat().getId())
                 .collect(Collectors.toSet());
+
+        // 2. Kiểm tra trong các đơn hàng PENDING của người dùng này cho cùng suất chiếu
+        List<Booking> userPendingBookings = bookingRepository.findByShowtimeId(showtimeId).stream()
+                .filter(b -> b.getUser().getId().equals(userId) && b.getStatus() == BookingStatus.PENDING)
+                .toList();
+        
+        for (Booking b : userPendingBookings) {
+            heldSeatIds.addAll(ticketRepository.findByBooking(b).stream()
+                    .map(t -> t.getSeat().getId())
+                    .toList());
+        }
+
         return heldSeatIds.containsAll(seatIds);
     }
 
     @Transactional
     public void convertHoldsToBooked(List<Integer> seatIds, Integer showtimeId) {
         for (Integer seatId : seatIds) {
-            Seat seat = seatRepository.findById(seatId).orElse(null);
             seatHoldingRepository.findBySeatIdAndShowtimeId(seatId, showtimeId)
                     .ifPresent(seatHoldingRepository::delete);
-
-            if (seat != null) {
-                SeatStatusMessageDto message = SeatStatusMessageDto.builder()
-                        .seatId(seatId)
-                        .showtimeId(showtimeId)
-                        .status("BOOKED")
-                        .holdByUserId(null)
-                        .expiredAt(null)
-                        .rowLetter(seat.getRowLabel())
-                        .seatNumber(seat.getColNumber())
-                        .build();
-                messagingTemplate.convertAndSend("/topic/showtime/" + showtimeId, message);
-            }
+            // Không gửi WebSocket ở đây vì trạng thái này sẽ do BookingService quyết định 
+            // (có thể là HOLDING nếu chờ thanh toán hoặc BOOKED nếu đã trả tiền).
         }
     }
 

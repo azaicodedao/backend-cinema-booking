@@ -16,18 +16,13 @@ import java.time.LocalDateTime;
  */
 public class ReviewDto {
     private Integer id;
+    private Integer movieId;
+    private String movieTitle;
+    private Integer userId;
+    private String username;
+    private Integer bookingId;
     private Integer rating;
     private String comment;
     private LocalDateTime createdAt;
-    private ReviewUser user;
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ReviewUser {
-        private Integer id;
-        private String fullName;
-        private String avatarUrl;
-    }
+    private ReviewUserDto user;
 }

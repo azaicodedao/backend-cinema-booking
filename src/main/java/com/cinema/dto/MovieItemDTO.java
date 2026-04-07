@@ -14,7 +14,8 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 /**
- * DTO chứa thông tin tóm tắt về phim được sử dụng để hiển thị trong danh sách hoặc trang chủ.
+ * DTO chứa thông tin tóm tắt về phim được sử dụng để hiển thị trong danh sách
+ * hoặc trang chủ.
  */
 public class MovieItemDTO {
     private Integer id;
@@ -22,13 +23,14 @@ public class MovieItemDTO {
     private String posterUrl;
     private Integer duration;
     private Integer ageRating;
+    private String trailerUrl;
     private String status;
     private LocalDate releaseDate;
-    
+
     private Double averageRating;
     private Integer reviewCount;
     private Map<Integer, Integer> ratingDistribution;
-    
+
     private Boolean isFeatured;
     private List<GenreDto> genres;
 }
