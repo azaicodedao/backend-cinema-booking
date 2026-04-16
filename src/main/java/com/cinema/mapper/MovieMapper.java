@@ -11,8 +11,10 @@ import com.cinema.enums.MovieStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(componentModel = "spring", uses = { GenreMapper.class })
+@Mapper(componentModel = "spring", uses = {
+        GenreMapper.class }, nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface MovieMapper {
 
     @Mapping(target = "status", expression = "java(movie.getStatus() != null ? movie.getStatus().name() : null)")
@@ -57,5 +59,7 @@ public interface MovieMapper {
     @Mapping(target = "trailerUrl", ignore = true)
     @Mapping(target = "releaseDate", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+
+    @Mapping(target = "id", ignore = true)
     void updateEntity(MovieDto movieDto, @MappingTarget Movie movie);
 }

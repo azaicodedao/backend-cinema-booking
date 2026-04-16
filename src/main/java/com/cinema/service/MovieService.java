@@ -10,6 +10,7 @@ import com.cinema.mapper.MovieMapper;
 import com.cinema.repository.GenreRepository;
 import com.cinema.repository.MovieRepository;
 import com.cinema.repository.ReviewRepository;
+import com.cinema.repository.ShowtimeRepository;
 import com.cinema.service.Cloudinary.CloudinaryService;
 import com.cinema.enums.MovieStatus;
 import lombok.AccessLevel;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +36,7 @@ public class MovieService {
     ReviewRepository reviewRepository;
     MovieMapper movieMapper;
     CloudinaryService cloudinaryService;
+    ShowtimeRepository showtimeRepository;
 
     /**
      * Lấy tất cả danh sách phim dưới dạng MovieDto.
@@ -74,7 +77,7 @@ public class MovieService {
      * @return Danh sách MovieItemDTO cho các phim sắp chiếu.
      */
     public List<MovieItemDTO> getComingSoonMovies() {
-        return movieRepository.findByStatus(MovieStatus.COMING_SOON).stream()
+        return movieRepository.findByStatus(MovieStatus.COMING).stream()
                 .map(this::toItemDtoWithPoster)
                 .collect(Collectors.toList());
     }
@@ -199,8 +202,11 @@ public class MovieService {
     @Transactional
     public void deleteMovie(Integer id) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
-        movie.setStatus(MovieStatus.ENDED); // map to ENDED if HIDDEN was used before
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phim"));
+        if (showtimeRepository.existsByMovieIdAndStartTimeAfter(id, LocalDateTime.now())) {
+            throw new RuntimeException("Không thể xóa phim vì đang có suất chiếu trong tương lai");
+        }
+        movie.setStatus(MovieStatus.HIDDEN);
         movieRepository.save(movie);
     }
 
@@ -307,4 +313,5 @@ public class MovieService {
     public byte[] getMoviePoster(Integer id) {
         return new byte[0];
     }
+
 }

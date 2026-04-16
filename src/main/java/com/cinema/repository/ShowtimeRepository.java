@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -35,4 +36,6 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
         GROUP BY r.totalRows, r.totalCols
     """)
     Integer countAvailableSeats(@Param("showtimeId") Integer showtimeId);
+
+    boolean existsByMovieIdAndStartTimeAfter(Integer movieId, LocalDateTime now);
 }

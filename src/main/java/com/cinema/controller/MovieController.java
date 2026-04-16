@@ -14,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -26,7 +27,6 @@ public class MovieController {
 
     /**
      * Lấy danh sách tất cả các phim.
-     * 
      * @return Danh sách MovieDto.
      */
     @GetMapping
@@ -35,11 +35,10 @@ public class MovieController {
         return ResponseEntity.ok(RestResponse.success(movies, "Fetched all movies successfully"));
     }
 
-    /**
-     * Lấy danh sách phim nổi bật (để hiển thị trên Carousel).
-     * 
-     * @return Danh sách MovieItemDTO.
-     */
+
+//     Lấy danh sách phim nổi bật (để hiển thị trên Carousel).
+//     @return Danh sách MovieItemDTO.
+
     @GetMapping("/featured")
     public ResponseEntity<RestResponse<List<MovieItemDTO>>> getFeaturedMovies() {
         List<MovieItemDTO> movies = movieService.getFeaturedMovies();
@@ -155,7 +154,7 @@ public class MovieController {
     /**
      * Xóa phim (chuyển sang trạng thái ENDED - Yêu cầu quyền ADMIN).
      * 
-     * @param id ID của phim.
+     // @param id của phim
      * @return Không có nội dung trả về.
      */
     @DeleteMapping("/{id}")
