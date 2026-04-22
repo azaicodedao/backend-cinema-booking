@@ -58,7 +58,11 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Old password does not match");
+            throw new IllegalArgumentException("Mật khẩu cũ không chính xác");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu mới không được trùng với mật khẩu cũ");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

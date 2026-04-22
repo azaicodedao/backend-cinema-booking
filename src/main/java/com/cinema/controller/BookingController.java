@@ -55,9 +55,10 @@ public class BookingController {
 
     @PostMapping("/{bookingId}/pay")
     @PreAuthorize("hasAuthority('CUSTOMER')")
-    public ResponseEntity<RestResponse<Void>> payBooking(@PathVariable Integer bookingId) {
+    public ResponseEntity<RestResponse<Void>> payBooking(@PathVariable Integer bookingId,
+                                                         @RequestParam(name = "paymentMethod", defaultValue = "VNPAY") String paymentMethod) {
         try {
-            bookingService.payBooking(bookingId);
+            bookingService.payBooking(bookingId, paymentMethod);
             return ResponseEntity.ok().body(RestResponse.<Void>success(null, "Booking Paid Successfully"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
