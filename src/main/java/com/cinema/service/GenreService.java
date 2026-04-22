@@ -20,42 +20,47 @@ import java.util.stream.Collectors;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class GenreService {
 
-    GenreRepository GenreRepository;
-    GenreMapper GenreMapper;
+    GenreRepository genreRepository;
+    GenreMapper genreMapper;
     MovieRepository movieRepository;
 
     public List<GenreDto> getAllGenres() {
-        return GenreRepository.findAll().stream()
-                .map(GenreMapper::toDto)
+        return genreRepository.findAll().stream()
+                .map(genreMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public GenreDto createGenre(GenreDto GenreDto) {
-        Genre Genre = GenreMapper.toEntity(GenreDto);
-        Genre saved = GenreRepository.save(Genre);
-        return GenreMapper.toDto(saved);
+    public GenreDto createGenre(GenreDto genreDto) {
+        if (genreRepository.existsByNameIgnoreCase(genreDto.getName())) {
+            throw new RuntimeException("Thể loại này đã tồn tại.");
+        }
+        Genre genre = genreMapper.toEntity(genreDto);
+        Genre saved = genreRepository.save(genre);
+        return genreMapper.toDto(saved);
     }
 
     @Transactional
-    public GenreDto updateGenre(Integer id, GenreDto GenreDto) {
-        Genre Genre = GenreRepository.findById(id)
+    public GenreDto updateGenre(Integer id, GenreDto genreDto) {
+        Genre genre = genreRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Genre not found"));
-//        if(GenreDto.getName() != null) {
-//            Genre.setName(GenreDto.getName());
-//        }
-        GenreMapper.updateEntity(GenreDto, Genre);
-        Genre saved = GenreRepository.save(Genre);
-        return GenreMapper.toDto(saved);
+        if (genreRepository.existsByNameIgnoreCaseAndIdNot(genreDto.getName(), id)) {
+            throw new RuntimeException("Thể loại này đã tồn tại");
+        }
+        genreMapper.updateEntity(genreDto, genre);
+        Genre saved = genreRepository.save(genre);
+        return genreMapper.toDto(saved);
     }
 
     @Transactional
     public void deleteGenre(Integer id) {
-        Genre genre = GenreRepository.findById(id)
+        Genre genre = genreRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Genre not found"));
-        if(movieRepository.existsByGenresId(id)) {
-            throw new RuntimeException("Không thể xóa thể loại, vì có bộ phim đang thuộc thể loại này");
+        if (movieRepository.existsByGenresId(id)) {
+            throw new RuntimeException(
+                    "Không thể xoá thể loại đang được sử dụng. Vui lòng gỡ khỏi các phim liên quan trước.");
         }
-        GenreRepository.delete(genre);
+        genreRepository.delete(genre);
     }
+
 }

@@ -27,7 +27,7 @@ public class UserController {
         return userDetails.getId();
     }
 
-    @GetMapping("/profile")
+    @GetMapping({"/profile", "/me/profile"})
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RestResponse<User>> getProfile() {
         try {
@@ -39,7 +39,7 @@ public class UserController {
         }
     }
 
-    @PutMapping("/profile")
+    @PutMapping({"/profile", "/me/profile"})
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RestResponse<User>> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         try {
@@ -51,7 +51,7 @@ public class UserController {
         }
     }
 
-    @PutMapping("/password")
+    @PutMapping({"/password", "/me/password"})
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RestResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         try {

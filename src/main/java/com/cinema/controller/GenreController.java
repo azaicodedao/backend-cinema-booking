@@ -34,7 +34,8 @@ public class GenreController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<RestResponse<GenreDto>> updateGenre(@PathVariable Integer id, @RequestBody GenreDto GenreDto) {
+    public ResponseEntity<RestResponse<GenreDto>> updateGenre(@PathVariable Integer id,
+            @RequestBody GenreDto GenreDto) {
         try {
             GenreDto updated = GenreService.updateGenre(id, GenreDto);
             return ResponseEntity.ok(RestResponse.success(updated, "Updated Genre successfully"));

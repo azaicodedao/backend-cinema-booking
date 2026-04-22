@@ -6,6 +6,8 @@ import com.cinema.entity.User;
 import com.cinema.enums.UserStatus;
 import com.cinema.security.services.UserDetailsImpl;
 import com.cinema.service.AdminUserService;
+import com.cinema.dto.request.AdminChangePasswordRequest;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -84,6 +86,22 @@ public class AdminUserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(RestResponse.error(400, "Bad Request", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<RestResponse<Void>> changePassword(
+            @PathVariable Integer id,
+            @Valid @RequestBody AdminChangePasswordRequest request) {
+        try {
+            adminUserService.changePassword(getCurrentAdminId(), id, request);
+            return ResponseEntity.ok(RestResponse.<Void>success(null, "User password changed successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(RestResponse.error(400, "Bad Request", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(RestResponse.error(500, "Error", e.getMessage()));
         }
     }
 }

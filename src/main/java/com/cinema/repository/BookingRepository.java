@@ -9,5 +9,9 @@ import java.util.List;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
     List<Booking> findByUserId(Integer userId);
+
     List<Booking> findByShowtimeId(Integer showtimeId);
+
+    // Mới thêm
+    boolean existsByShowtimeIdAndStatus(Integer showtimeId, com.cinema.enums.BookingStatus status);
 }
