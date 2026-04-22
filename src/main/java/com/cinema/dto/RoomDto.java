@@ -18,4 +18,5 @@ public class RoomDto {
     private Integer totalSeats;
     private String type;
     private String status;
+    private Double surcharge;
 }

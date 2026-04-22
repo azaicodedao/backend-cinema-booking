@@ -43,7 +43,8 @@ public class Showtime {
     @Enumerated(EnumType.STRING)
     private ShowtimeStatus status;
 
-    private BigDecimal price;
+    @Column(name = "base_price", precision = 12, scale = 2)
+    private BigDecimal basePrice;
 
     @Column(name = "show_date")
     private LocalDate showDate;

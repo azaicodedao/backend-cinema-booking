@@ -5,7 +5,7 @@ import com.cinema.dto.SeatStatusDto;
 import com.cinema.entity.Room;
 import com.cinema.entity.Seat;
 import com.cinema.entity.Showtime;
-import com.cinema.enums.SeatType;
+import com.cinema.entity.SeatType;
 import com.cinema.repository.SeatRepository;
 import com.cinema.repository.ShowtimeRepository;
 import lombok.AccessLevel;
@@ -46,13 +46,21 @@ public class SeatService {
                     .findFirst()
                     .orElse(null);
 
-            BigDecimal price = calculatePrice(showtime.getPrice(), seat.getSeatType());
+            BigDecimal roomSurcharge = (showtime.getRoom() != null && showtime.getRoom().getRoomType() != null)
+                    ? showtime.getRoom().getRoomType().getSurcharge() : BigDecimal.ZERO;
+            if (roomSurcharge == null) roomSurcharge = BigDecimal.ZERO;
+
+            BigDecimal seatSurcharge = (seat.getSeatType() != null) ? seat.getSeatType().getSurcharge() : BigDecimal.ZERO;
+            if (seatSurcharge == null) seatSurcharge = BigDecimal.ZERO;
+
+            BigDecimal price = (showtime.getBasePrice() != null ? showtime.getBasePrice() : BigDecimal.ZERO)
+                    .add(roomSurcharge).add(seatSurcharge);
 
             return SeatStatusDto.builder()
                     .seatId(seat.getId())
                     .rowLabel(seat.getRowLabel())
                     .colNumber(seat.getColNumber())
-                    .seatType(seat.getSeatType().name())
+                    .seatType(seat.getSeatType() != null ? seat.getSeatType().getName() : "NORMAL")
                     .price(price)
                     .status(statusMsg != null ? statusMsg.getStatus() : "AVAILABLE")
                     .holdByUserId(statusMsg != null ? statusMsg.getHoldByUserId() : null)
@@ -67,13 +75,5 @@ public class SeatService {
                 .startTime(showtime.getStartTime())
                 .seatsByRow(seatsByRow)
                 .build();
-    }
-
-    private BigDecimal calculatePrice(BigDecimal basePrice, SeatType type) {
-        if (basePrice == null) return BigDecimal.ZERO;
-        if (type == SeatType.VIP) {
-            return basePrice.add(new BigDecimal("20000"));
-        }
-        return basePrice;
     }
 }

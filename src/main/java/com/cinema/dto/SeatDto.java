@@ -16,4 +16,6 @@ public class SeatDto {
     private String rowLetter;
     private Integer seatNumber;
     private String status;
+    private String typeName;
+    private Double surcharge;
 }

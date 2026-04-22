@@ -11,6 +11,8 @@ public interface SeatMapper {
     @Mapping(source = "room.id", target = "roomId")
     @Mapping(source = "rowLabel", target = "rowLetter")
     @Mapping(source = "colNumber", target = "seatNumber")
+    @Mapping(target = "typeName", source = "seatType.name")
+    @Mapping(target = "surcharge", source = "seatType.surcharge")
     SeatDto toDto(Seat seat);
 
     @Mapping(target = "room", ignore = true)

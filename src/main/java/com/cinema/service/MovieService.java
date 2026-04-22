@@ -195,7 +195,7 @@ public class MovieService {
     }
 
     /**
-     * "Xóa" một bộ phim bằng cách chuyển trạng thái sang ENDED.
+     * "Xóa" một bộ phim bằng cách chuyển trạng thái sang HIDDEN.
      * 
      * @param id ID của phim cần xóa.
      */

@@ -2,7 +2,6 @@ package com.cinema.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import com.cinema.enums.SeatType;
 
 @Entity
 @Table(
@@ -32,7 +31,7 @@ public class Seat {
     @Column(name = "col_number")
     private Integer colNumber;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "seat_type")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seat_type_id")
     private SeatType seatType;
 }

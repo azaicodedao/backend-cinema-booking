@@ -152,7 +152,7 @@ public class MovieController {
     }
 
     /**
-     * Xóa phim (chuyển sang trạng thái ENDED - Yêu cầu quyền ADMIN).
+     * Xóa phim (chuyển sang trạng thái HIDDEN - Yêu cầu quyền ADMIN).
      * 
      // @param id của phim
      * @return Không có nội dung trả về.

@@ -2,7 +2,6 @@ package com.cinema.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import com.cinema.enums.RoomType;
 import com.cinema.enums.RoomStatus;
 
 @Entity
@@ -21,8 +20,9 @@ public class Room {
     @Column(columnDefinition = "NVARCHAR(50)")
     private String name;
 
-    @Convert(converter = com.cinema.converter.RoomTypeConverter.class)
-    private RoomType type;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_type_id")
+    private RoomType roomType;
 
     @Column(name = "total_rows")
     private Integer totalRows;

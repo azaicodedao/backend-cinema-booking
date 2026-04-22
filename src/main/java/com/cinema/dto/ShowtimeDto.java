@@ -22,7 +22,8 @@ public class ShowtimeDto {
     private LocalDate showDate;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private Double price;
+    private Double basePrice;
+    private Double roomSurcharge;
 
     // Fields added for UI convenience
     private String timeString;

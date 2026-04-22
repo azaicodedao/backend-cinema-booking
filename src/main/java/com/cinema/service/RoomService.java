@@ -7,6 +7,7 @@ import com.cinema.entity.Seat;
 import com.cinema.mapper.RoomMapper;
 import com.cinema.mapper.SeatMapper;
 import com.cinema.repository.RoomRepository;
+import com.cinema.repository.RoomTypeRepository;
 import com.cinema.repository.SeatRepository;
 import com.cinema.repository.ShowtimeRepository;
 import lombok.AccessLevel;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class RoomService {
 
     RoomRepository roomRepository;
+    RoomTypeRepository roomTypeRepository;
     SeatRepository seatRepository;
     RoomMapper roomMapper;
     SeatMapper seatMapper;
@@ -68,7 +70,8 @@ public class RoomService {
             room.setName(roomDto.getName());
         }
         if (roomDto.getType() != null) {
-            room.setType(com.cinema.enums.RoomType.valueOf(roomDto.getType()));
+            room.setRoomType(roomTypeRepository.findByName(roomDto.getType())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng: " + roomDto.getType())));
         }
         if (roomDto.getStatus() != null) {
             room.setStatus(com.cinema.enums.RoomStatus.valueOf(roomDto.getStatus()));

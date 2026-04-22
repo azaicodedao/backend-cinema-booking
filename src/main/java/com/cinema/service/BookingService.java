@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 
 /**
@@ -89,27 +90,51 @@ public class BookingService {
             }
         }
 
-        // Kiểm tra giá Suất chiếu (null safety)
-        BigDecimal unitPrice = showtime.getPrice() != null ? showtime.getPrice() : BigDecimal.ZERO;
-        BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(seats.size()));
+        // Lấy phụ phí phòng (null-safe)
+        BigDecimal roomSurcharge = (showtime.getRoom() != null && showtime.getRoom().getRoomType() != null)
+                ? showtime.getRoom().getRoomType().getSurcharge()
+                : BigDecimal.ZERO;
+        if (roomSurcharge == null) roomSurcharge = BigDecimal.ZERO;
+
+        BigDecimal basePrice = showtime.getBasePrice() != null ? showtime.getBasePrice() : BigDecimal.ZERO;
 
         Booking booking = new Booking();
         booking.setBookingCode("BKG" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         booking.setUser(user);
         booking.setShowtime(showtime);
-        booking.setTotalPrice(totalPrice);
         booking.setStatus(BookingStatus.PENDING);
 
-        Booking savedBooking = bookingRepository.save(booking);
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        List<Ticket> tickets = new ArrayList<>();
 
         for (Seat seat : seats) {
+            // Lấy phụ phí ghế (null-safe)
+            BigDecimal seatSurcharge = (seat.getSeatType() != null) 
+                    ? seat.getSeatType().getSurcharge() 
+                    : BigDecimal.ZERO;
+            if (seatSurcharge == null) seatSurcharge = BigDecimal.ZERO;
+
+            // Công thức: ticketPrice = basePrice + roomSurcharge + seatSurcharge
+            BigDecimal ticketPrice = basePrice.add(roomSurcharge).add(seatSurcharge);
+
             Ticket ticket = new Ticket();
-            ticket.setBooking(savedBooking);
+            ticket.setBooking(booking); // Chưa save booking nhưng quan hệ ManyToOne cần set object
             ticket.setSeat(seat);
             ticket.setQrCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase());
             ticket.setStatus(TicketStatus.VALID); 
-            ticket.setPrice(unitPrice); // Gán giá tiền cho từng vé
-            ticketRepository.save(ticket);
+            ticket.setPrice(ticketPrice);
+            
+            tickets.add(ticket);
+            totalPrice = totalPrice.add(ticketPrice);
+        }
+
+        booking.setTotalPrice(totalPrice);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // Lưu danh sách vé (có thể dùng @OneToMany cascade nếu đã cấu hình, ở đây lưu thủ công cho chắc)
+        for (Ticket t : tickets) {
+            t.setBooking(savedBooking);
+            ticketRepository.save(t);
         }
 
         // Chuyển trạng thái giữ chỗ sang Đang giữ (PENDING booking)
@@ -220,7 +245,7 @@ public class BookingService {
                 .map(t -> BookingDetailDTO.TicketInfo.builder()
                         .ticketId(t.getId())
                         .seatLabel(t.getSeat().getRowLabel() + t.getSeat().getColNumber())
-                        .seatType(t.getSeat().getSeatType().name())
+                        .seatType(t.getSeat().getSeatType().getName())
                         .qrCode(t.getQrCode())
                         .build())
                 .toList();

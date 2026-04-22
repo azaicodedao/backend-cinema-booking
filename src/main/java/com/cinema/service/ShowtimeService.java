@@ -154,10 +154,10 @@ public class ShowtimeService {
         }
 
         String status = "AVAILABLE";
-        if (st.getStatus() != null) {
-            status = st.getStatus().name();
-        } else if (availableSeats != null && availableSeats <= 0) {
+        if (availableSeats != null && availableSeats <= 0) {
             status = "FULL";
+        } else if (st.getStatus() != null) {
+            status = st.getStatus().name();
         }
 
         return ShowtimeSnapshotDto.builder()
@@ -178,13 +178,8 @@ public class ShowtimeService {
         if (room == null)
             return "";
         String format = "2D";
-        if (room.getType() != null) {
-            switch (room.getType()) {
-                case IMAX -> format = "IMAX";
-                case _4DX -> format = "4DX";
-                case PREMIUM -> format = "Premium";
-                default -> format = "2D";
-            }
+        if (room.getRoomType() != null) {
+            format = room.getRoomType().getName();
         }
         String roomName = room.getName() != null ? room.getName() : "";
         return format + " · " + roomName;
@@ -211,10 +206,10 @@ public class ShowtimeService {
         } catch (Exception ignored) {
         }
 
-        if (st.getStatus() != null) {
-            dto.setStatus(st.getStatus().name());
-        } else if (availableSeats != null && availableSeats <= 0) {
+        if (availableSeats != null && availableSeats <= 0) {
             dto.setStatus("FULL");
+        } else if (st.getStatus() != null) {
+            dto.setStatus(st.getStatus().name());
         } else {
             dto.setStatus("AVAILABLE");
         }
@@ -250,8 +245,8 @@ public class ShowtimeService {
         showtime.setEndTime(endTime);
         showtime.setStatus(ShowtimeStatus.OPEN);
 
-        if (showtimeDto.getPrice() != null)
-            showtime.setPrice(BigDecimal.valueOf(showtimeDto.getPrice()));
+        if (showtimeDto.getBasePrice() != null)
+            showtime.setBasePrice(BigDecimal.valueOf(showtimeDto.getBasePrice()));
 
         // 3. Save and return DTO
         Showtime saved = showtimeRepository.save(showtime);
@@ -297,8 +292,8 @@ public class ShowtimeService {
         existingShowtime.setStartTime(showtimeDto.getStartTime());
         existingShowtime.setEndTime(endTime);
         existingShowtime.setShowDate(showtimeDto.getStartTime().toLocalDate());
-        if (showtimeDto.getPrice() != null) {
-            existingShowtime.setPrice(BigDecimal.valueOf(showtimeDto.getPrice()));
+        if (showtimeDto.getBasePrice() != null) {
+            existingShowtime.setBasePrice(BigDecimal.valueOf(showtimeDto.getBasePrice()));
         }
 
         Showtime saved = showtimeRepository.save(existingShowtime);
