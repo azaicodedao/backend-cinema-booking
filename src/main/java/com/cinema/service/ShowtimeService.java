@@ -11,6 +11,9 @@ import com.cinema.repository.MovieRepository;
 import com.cinema.repository.ReviewRepository;
 import com.cinema.repository.RoomRepository;
 import com.cinema.repository.ShowtimeRepository;
+import com.cinema.repository.BookingRepository;
+import com.cinema.enums.BookingStatus;
+import com.cinema.enums.ShowtimeStatus;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -33,6 +36,7 @@ public class ShowtimeService {
     RoomRepository roomRepository;
     ShowtimeMapper showtimeMapper;
     ReviewRepository reviewRepository;
+    BookingRepository bookingRepository;
 
     @Transactional(readOnly = true)
     public List<ShowtimeDto> getAllShowtimes() {
@@ -54,7 +58,8 @@ public class ShowtimeService {
 
     @Transactional(readOnly = true)
     public List<MovieScheduleDto> getScheduleByDate(LocalDate targetDate) {
-        // 1. Tự động sửa các bản ghi cũ bị thiếu showDate (chỉ quét các bản ghi bị null)
+        // 1. Tự động sửa các bản ghi cũ bị thiếu showDate (chỉ quét các bản ghi bị
+        // null)
         List<Showtime> missingDateShowtimes = showtimeRepository.findByShowDateIsNull();
         if (!missingDateShowtimes.isEmpty()) {
             for (Showtime st : missingDateShowtimes) {
@@ -66,7 +71,8 @@ public class ShowtimeService {
         }
 
         // 2. Lấy tất cả showtimes của ngày, sắp xếp theo giờ tăng dần
-        List<Showtime> showtimes = showtimeRepository.findByShowDateOrderByStartTimeAsc(targetDate != null ? targetDate : LocalDate.now());
+        List<Showtime> showtimes = showtimeRepository
+                .findByShowDateOrderByStartTimeAsc(targetDate != null ? targetDate : LocalDate.now());
 
         if (showtimes.isEmpty()) {
             return Collections.emptyList();
@@ -165,10 +171,12 @@ public class ShowtimeService {
     }
 
     /**
-     * Tạo chuỗi mô tả định dạng chiếu và phòng, VD: "IMAX · Phòng 1", "2D · Phòng 3".
+     * Tạo chuỗi mô tả định dạng chiếu và phòng, VD: "IMAX · Phòng 1", "2D · Phòng
+     * 3".
      */
     private String buildFormatAndRoom(Room room) {
-        if (room == null) return "";
+        if (room == null)
+            return "";
         String format = "2D";
         if (room.getType() != null) {
             switch (room.getType()) {
@@ -200,7 +208,8 @@ public class ShowtimeService {
         try {
             availableSeats = showtimeRepository.countAvailableSeats(st.getId());
             dto.setAvailableSeats(availableSeats);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         if (st.getStatus() != null) {
             dto.setStatus(st.getStatus().name());
@@ -211,6 +220,8 @@ public class ShowtimeService {
         }
     }
 
+    // Mới thêm
+    @Transactional
     public ShowtimeDto createShowtime(ShowtimeDto showtimeDto) {
         // 1. Fetch related entities
         Movie movie = movieRepository.findById(showtimeDto.getMovieId())
@@ -218,17 +229,93 @@ public class ShowtimeService {
         Room room = roomRepository.findById(showtimeDto.getRoomId())
                 .orElseThrow(() -> new IllegalArgumentException("Room not found"));
 
-        // 2. Map DTO to Entity (Tự động gán showDate thông qua @AfterMapping trong Mapper)
+        // Mới thêm
+        // Tính toán giờ kết thúc: giờ bắt đầu + thời lượng phim + 15p buffer
+        java.time.LocalDateTime endTime = showtimeDto.getStartTime()
+                .plusMinutes(movie.getDuration())
+                .plusMinutes(15);
+
+        // Kiểm tra xung đột lịch chiếu
+        if (showtimeRepository.hasConflict(room.getId(), showtimeDto.getStartTime(), endTime)) {
+            throw new IllegalArgumentException("Phòng chiếu đã có lịch trong khung giờ này");
+        }
+
+        // 2. Map DTO to Entity (Tự động gán showDate thông qua @AfterMapping trong
+        // Mapper)
         Showtime showtime = showtimeMapper.toEntity(showtimeDto);
         showtime.setMovie(movie);
         showtime.setRoom(room);
 
-        if (showtimeDto.getPrice() != null) {
+        // Mới thêm
+        showtime.setEndTime(endTime);
+        showtime.setStatus(ShowtimeStatus.OPEN);
+
+        if (showtimeDto.getPrice() != null)
             showtime.setPrice(BigDecimal.valueOf(showtimeDto.getPrice()));
-        }
 
         // 3. Save and return DTO
         Showtime saved = showtimeRepository.save(showtime);
         return showtimeMapper.toDto(saved);
+    }
+
+    // Mới thêm
+
+    @Transactional
+    public ShowtimeDto updateShowtime(Integer id, ShowtimeDto showtimeDto) {
+        Showtime existingShowtime = showtimeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Showtime not found"));
+
+        Movie movie = movieRepository.findById(showtimeDto.getMovieId())
+                .orElseThrow(() -> new IllegalArgumentException("Movie not found"));
+        Room newRoom = roomRepository.findById(showtimeDto.getRoomId())
+                .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+
+        boolean hasConfirmedTickets = bookingRepository.existsByShowtimeIdAndStatus(id, BookingStatus.CONFIRMED);
+
+        if (hasConfirmedTickets) {
+            Room oldRoom = existingShowtime.getRoom();
+            int oldCapacity = oldRoom.getTotalRows() * oldRoom.getTotalCols();
+            int newCapacity = newRoom.getTotalRows() * newRoom.getTotalCols();
+            if (newCapacity < oldCapacity) {
+                throw new IllegalArgumentException(
+                        "Suất chiếu đã có vé CONFIRMED chỉ có thể sửa phòng chiếu cùng sức chứa hoặc lớn hơn.");
+            }
+        }
+
+        // Tính lại giờ kết thúc
+        java.time.LocalDateTime endTime = showtimeDto.getStartTime()
+                .plusMinutes(movie.getDuration())
+                .plusMinutes(15);
+
+        // Kiểm tra xung đột (bỏ qua id hiện tại)
+        if (showtimeRepository.hasConflictExcludeId(newRoom.getId(), id, showtimeDto.getStartTime(), endTime)) {
+            throw new IllegalArgumentException("Phòng chiếu đã có lịch trong khung giờ này");
+        }
+
+        existingShowtime.setMovie(movie);
+        existingShowtime.setRoom(newRoom);
+        existingShowtime.setStartTime(showtimeDto.getStartTime());
+        existingShowtime.setEndTime(endTime);
+        existingShowtime.setShowDate(showtimeDto.getStartTime().toLocalDate());
+        if (showtimeDto.getPrice() != null) {
+            existingShowtime.setPrice(BigDecimal.valueOf(showtimeDto.getPrice()));
+        }
+
+        Showtime saved = showtimeRepository.save(existingShowtime);
+        return showtimeMapper.toDto(saved);
+    }
+
+    @Transactional
+    public void deleteShowtime(Integer id) {
+        Showtime showtime = showtimeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Showtime not found"));
+
+        if (bookingRepository.existsByShowtimeIdAndStatus(id, BookingStatus.CONFIRMED)) {
+            throw new IllegalArgumentException(
+                    "Không thể xoá suất chiếu đã có khách đặt vé. Vui lòng huỷ các vé liên quan trước.");
+        }
+
+        showtime.setStatus(ShowtimeStatus.CLOSED);
+        showtimeRepository.save(showtime);
     }
 }

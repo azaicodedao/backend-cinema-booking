@@ -39,12 +39,12 @@ public class ShowtimeController {
      * Nếu không truyền date, mặc định lấy ngày hôm nay.
      *
      * @param date ngày cần xem lịch, format: yyyy-MM-dd. VD: 2026-04-01
-     * @return Mảng MovieScheduleDto, mỗi phần tử là 1 phim với danh sách suất chiếu lồng sẵn
+     * @return Mảng MovieScheduleDto, mỗi phần tử là 1 phim với danh sách suất chiếu
+     *         lồng sẵn
      */
     @GetMapping("/schedule")
     public ResponseEntity<RestResponse<List<MovieScheduleDto>>> getSchedule(
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         List<MovieScheduleDto> schedule = showtimeService.getScheduleByDate(date);
         String msg = "Fetched schedule for " + (date != null ? date : LocalDate.now());
         return ResponseEntity.ok(RestResponse.success(schedule, msg));
@@ -55,14 +55,48 @@ public class ShowtimeController {
     public ResponseEntity<RestResponse<ShowtimeDto>> createShowtime(@RequestBody ShowtimeDto showtimeDto) {
         try {
             ShowtimeDto createdShowtime = showtimeService.createShowtime(showtimeDto);
-            return ResponseEntity.ok(RestResponse.success(createdShowtime, "Created showtime successfully"));
+            return ResponseEntity.ok(RestResponse.success(createdShowtime, "Tạo suất chiếu thành công"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(RestResponse.error(400, "Bad Request", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(RestResponse.error(500, "Internal Server Error", "An error occurred while creating showtime"));
+                    .body(RestResponse.error(500, "Internal Server Error",
+                            "An error occurred while creating showtime"));
+        }
+    }
+
+    // Mới thêm
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<RestResponse<ShowtimeDto>> updateShowtime(@PathVariable Integer id,
+            @RequestBody ShowtimeDto showtimeDto) {
+        try {
+            ShowtimeDto updatedShowtime = showtimeService.updateShowtime(id, showtimeDto);
+            return ResponseEntity.ok(RestResponse.success(updatedShowtime, "Cập nhật suất chiếu thành công"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(RestResponse.error(400, "Bad Request", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(RestResponse.error(500, "Internal Server Error",
+                            "An error occurred while updating showtime"));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<RestResponse<Void>> deleteShowtime(@PathVariable Integer id) {
+        try {
+            showtimeService.deleteShowtime(id);
+            return ResponseEntity.ok(RestResponse.success(null, "Xoá suất chiếu thành công"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(RestResponse.error(400, "Bad Request", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(RestResponse.error(500, "Internal Server Error",
+                            "An error occurred while deleting showtime"));
         }
     }
 }
-

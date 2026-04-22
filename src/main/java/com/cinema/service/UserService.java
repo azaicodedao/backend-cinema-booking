@@ -39,7 +39,7 @@ public class UserService {
             try {
                 user.setGender(com.cinema.enums.Gender.valueOf(request.getGender().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                // Ignore invalid gender values or handle as needed
+                
             }
         }
         if (request.getAddress() != null) {
@@ -63,6 +63,10 @@ public class UserService {
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Mật khẩu mới không được trùng với mật khẩu cũ");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu mới phải khác mật khẩu hiện tại.");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

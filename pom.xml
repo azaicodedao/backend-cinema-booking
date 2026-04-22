@@ -31,6 +31,7 @@
         <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
         <lombok.version>1.18.34</lombok.version>
     </properties>
+
     <dependencies>
         <!-- Spring Boot Web -->
         <dependency>

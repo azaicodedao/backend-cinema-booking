@@ -22,6 +22,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     Page<User> findAllByStatus(UserStatus status, Pageable pageable);
 
+    long countByRoleAndStatus(Role role, UserStatus status);
+
     @Query("SELECT u FROM User u WHERE " +
             "(:keyword IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:role IS NULL OR u.role = :role) " +

@@ -34,13 +34,26 @@ public class GenreController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<RestResponse<GenreDto>> updateGenre(@PathVariable Integer id, @RequestBody GenreDto GenreDto) {
+    public ResponseEntity<RestResponse<GenreDto>> updateGenre(@PathVariable Integer id,
+            @RequestBody GenreDto GenreDto) {
         try {
             GenreDto updated = GenreService.updateGenre(id, GenreDto);
             return ResponseEntity.ok(RestResponse.success(updated, "Updated Genre successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(RestResponse.error(404, "Not Found", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<RestResponse<Void>> deleteGenre(@PathVariable Integer id) {
+        try {
+            GenreService.deleteGenre(id);
+            return ResponseEntity.ok(RestResponse.success(null, "Đã xóa thể loại thành công"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(RestResponse.error(400, "Lỗi khi xóa", e.getMessage()));
         }
     }
 }

@@ -37,4 +37,26 @@ public class RoomController {
         RoomDto createdRoom = roomService.createRoom(roomDto);
         return ResponseEntity.ok(RestResponse.success(createdRoom, "Created room successfully"));
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<RestResponse<RoomDto>> getRoomById(@PathVariable Integer id) {
+        RoomDto room = roomService.getRoomById(id);
+        return ResponseEntity.ok(RestResponse.success(room, "Fetched room details successfully"));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<RestResponse<RoomDto>> updateRoom(
+            @PathVariable Integer id,
+            @RequestBody RoomDto roomDto) {
+        RoomDto updatedRoom = roomService.updateRoom(id, roomDto);
+        return ResponseEntity.ok(RestResponse.success(updatedRoom, "Updated room successfully"));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<RestResponse<Void>> deleteRoom(@PathVariable Integer id) {
+        roomService.deleteRoom(id);
+        return ResponseEntity.ok(RestResponse.success(null, "Deleted room successfully"));
+    }
 }

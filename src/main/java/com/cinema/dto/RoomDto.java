@@ -16,5 +16,6 @@ public class RoomDto {
     private Integer totalRows;
     private Integer totalCols;
     private Integer totalSeats;
-    private String roomType;
+    private String type;
+    private String status;
 }

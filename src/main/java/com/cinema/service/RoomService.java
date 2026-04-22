@@ -8,6 +8,7 @@ import com.cinema.mapper.RoomMapper;
 import com.cinema.mapper.SeatMapper;
 import com.cinema.repository.RoomRepository;
 import com.cinema.repository.SeatRepository;
+import com.cinema.repository.ShowtimeRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -26,6 +27,7 @@ public class RoomService {
     SeatRepository seatRepository;
     RoomMapper roomMapper;
     SeatMapper seatMapper;
+    ShowtimeRepository showtimeRepository;
 
     public List<RoomDto> getAllRooms() {
         return roomRepository.findAll().stream()
@@ -56,5 +58,40 @@ public class RoomService {
         }
 
         return roomMapper.toDto(savedRoom);
+    }
+
+    @Transactional
+    public RoomDto updateRoom(Integer id, RoomDto roomDto) {
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + id));
+        if (roomDto.getName() != null) {
+            room.setName(roomDto.getName());
+        }
+        if (roomDto.getType() != null) {
+            room.setType(com.cinema.enums.RoomType.valueOf(roomDto.getType()));
+        }
+        if (roomDto.getStatus() != null) {
+            room.setStatus(com.cinema.enums.RoomStatus.valueOf(roomDto.getStatus()));
+        }
+        Room savedRoom = roomRepository.save(room);
+        return roomMapper.toDto(savedRoom);
+    }
+
+    // Hiển thị
+    public RoomDto getRoomById(Integer id) {
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Room not found with id: " + id));
+        return roomMapper.toDto(room);
+    }
+
+    // Xóa phòng
+    @Transactional
+    public void deleteRoom(Integer id) {
+        if (showtimeRepository.existsByRoomId(id)) {
+            throw new RuntimeException("Không thể xóa phòng vì phòng có suất chiếu");
+        }
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + id));
+        roomRepository.delete(room);
     }
 }
