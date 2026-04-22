@@ -65,10 +65,6 @@ public class UserService {
             throw new IllegalArgumentException("Mật khẩu mới không được trùng với mật khẩu cũ");
         }
 
-        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Mật khẩu mới phải khác mật khẩu hiện tại.");
-        }
-
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
     }
