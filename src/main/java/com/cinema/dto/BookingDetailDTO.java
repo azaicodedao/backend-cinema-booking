@@ -29,8 +29,12 @@ public class BookingDetailDTO {
     private Double totalPrice;
     private String status;
     private LocalDateTime createdAt;
+    private Integer paymentCountdownSeconds;
     private Boolean hasReviewed;
     private String customerName;
+    private String paymentMethod;
+    private String transactionCode;
+    private LocalDateTime paidAt;
     private List<TicketInfo> tickets;
 
     @Data

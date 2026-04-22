@@ -39,6 +39,12 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
+    public ReviewDto getReviewByBookingId(Integer bookingId) {
+        Review review = reviewRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found for this booking"));
+        return reviewMapper.toDto(review);
+    }
+
     public ReviewDto addReview(ReviewDto reviewDto, Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));

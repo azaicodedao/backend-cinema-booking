@@ -34,6 +34,18 @@ public class ReviewController {
         return ResponseEntity.ok(RestResponse.success(summary, "Fetched review summary successfully"));
     }
 
+    @GetMapping("/booking/{bookingId}")
+    @PreAuthorize("hasAuthority('CUSTOMER')")
+    public ResponseEntity<RestResponse<ReviewDto>> getReviewByBooking(@PathVariable Integer bookingId) {
+        try {
+            ReviewDto review = reviewService.getReviewByBookingId(bookingId);
+            return ResponseEntity.ok(RestResponse.success(review, "Fetched review successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(RestResponse.error(404, "Not Found", e.getMessage()));
+        }
+    }
+
     @PostMapping
     @PreAuthorize("hasAuthority('CUSTOMER')")
     public ResponseEntity<RestResponse<ReviewDto>> addReview(@RequestBody ReviewDto reviewDto) {
@@ -47,7 +59,8 @@ public class ReviewController {
                     .body(RestResponse.error(400, "Bad Request", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(RestResponse.error(500, "Internal Server Error", "An error occurred while adding the review"));
+                    .body(RestResponse.error(500, "Internal Server Error",
+                            "An error occurred while adding the review"));
         }
     }
 }

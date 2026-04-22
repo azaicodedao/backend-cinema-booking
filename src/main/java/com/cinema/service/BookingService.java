@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +38,7 @@ public class BookingService {
     UserRepository userRepository;
     SeatHoldingService seatHoldingService;
     ReviewRepository reviewRepository;
+    PaymentRepository paymentRepository;
     SimpMessagingTemplate messagingTemplate; // Tiêm WebSocket template để gửi thông báo thời gian thực
 
     /**
@@ -130,7 +132,7 @@ public class BookingService {
     }
 
     @Transactional
-    public void payBooking(Integer bookingId) {
+    public void payBooking(Integer bookingId, String methodString) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
                 
@@ -140,6 +142,24 @@ public class BookingService {
 
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
+
+        com.cinema.enums.PaymentMethod enumMethod;
+        try {
+            enumMethod = com.cinema.enums.PaymentMethod.valueOf(methodString.toUpperCase());
+        } catch (Exception e) {
+            enumMethod = com.cinema.enums.PaymentMethod.VNPAY;
+        }
+
+        Payment payment = Payment.builder()
+                .booking(booking)
+                .method(enumMethod)
+                .amount(booking.getTotalPrice())
+                .status("SUCCESS")
+                .transactionCode("TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .idempotencyKey(UUID.randomUUID().toString())
+                .paidAt(LocalDateTime.now())
+                .build();
+        paymentRepository.save(payment);
 
         List<Ticket> tickets = ticketRepository.findByBooking(booking);
         for (Ticket t : tickets) {
@@ -205,7 +225,13 @@ public class BookingService {
                         .build())
                 .toList();
 
-        return BookingDetailDTO.builder()
+        long elapsedSeconds = java.time.Duration.between(booking.getCreatedAt(), java.time.LocalDateTime.now()).getSeconds();
+        int remainingSeconds = Math.max(0, 600 - (int) elapsedSeconds);
+
+        // --- Truy vấn bảng Payments để lấy thông tin biên lai thanh toán ---
+        java.util.Optional<Payment> paymentOpt = paymentRepository.findByBookingId(bookingId);
+
+        BookingDetailDTO.BookingDetailDTOBuilder builder = BookingDetailDTO.builder()
                 .bookingId(booking.getId())
                 .movieId(booking.getShowtime().getMovie().getId())
                 .bookingCode(booking.getBookingCode())
@@ -218,10 +244,20 @@ public class BookingService {
                 .totalPrice(booking.getTotalPrice().doubleValue())
                 .status(booking.getStatus().name())
                 .createdAt(booking.getCreatedAt())
+                .paymentCountdownSeconds(remainingSeconds)
                 .tickets(ticketInfos)
                 .customerName(booking.getUser().getFullName())
-                .hasReviewed(reviewRepository.existsByBookingId(booking.getId()))
-                .build();
+                .hasReviewed(reviewRepository.existsByBookingId(booking.getId()));
+
+        // Nếu đã có bản ghi thanh toán → gán thông tin biên lai vào DTO
+        if (paymentOpt.isPresent()) {
+            Payment payment = paymentOpt.get();
+            builder.paymentMethod(payment.getMethod().name())
+                   .transactionCode(payment.getTransactionCode())
+                   .paidAt(payment.getPaidAt());
+        }
+
+        return builder.build();
     }
 
     @Transactional(readOnly = true)
@@ -253,5 +289,33 @@ public class BookingService {
                     .hasReviewed(reviewRepository.existsByBookingId(booking.getId()))
                     .build();
         }).toList();
+    }
+
+    /**
+     * Tự động quét và Hủy các đơn hàng đang PENDING nhưng vượt quá 10 phút.
+     * Cập nhật trạng thái thành CANCELLED và gửi thông báo Socket để nhả ghế cho người khác.
+     */
+    @Transactional
+    public void cancelExpiredPendingBookings() {
+        LocalDateTime tenMinutesAgo = LocalDateTime.now().minusMinutes(10);
+        List<Booking> expiredBookings = bookingRepository.findByStatusAndCreatedAtBefore(BookingStatus.PENDING, tenMinutesAgo);
+
+        for (Booking booking : expiredBookings) {
+            booking.setStatus(BookingStatus.CANCELLED);
+            bookingRepository.save(booking);
+
+            List<Ticket> tickets = ticketRepository.findByBooking(booking);
+            for (Ticket t : tickets) {
+                // Nhả ghế
+                messagingTemplate.convertAndSend("/topic/showtime/" + booking.getShowtime().getId(), 
+                    SeatStatusMessageDto.builder()
+                        .seatId(t.getSeat().getId())
+                        .showtimeId(booking.getShowtime().getId())
+                        .status("AVAILABLE")
+                        .rowLetter(t.getSeat().getRowLabel())
+                        .seatNumber(t.getSeat().getColNumber())
+                        .build());
+            }
+        }
     }
 }

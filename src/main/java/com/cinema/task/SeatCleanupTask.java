@@ -15,6 +15,7 @@ package com.cinema.task;
  public class SeatCleanupTask {
  
      SeatHoldingService seatHoldingService;
+     com.cinema.service.BookingService bookingService;
  
      /**
       * Chạy mỗi 30 giây (30,000 milis) để giải phóng các ghế đã hết hạn giữ.
@@ -23,5 +24,8 @@ package com.cinema.task;
      public void cleanupExpiredHolds() {
          log.debug("Checking for expired seat holds...");
          seatHoldingService.releaseExpiredHolds();
+
+         log.debug("Checking for expired pending bookings...");
+         bookingService.cancelExpiredPendingBookings();
      }
  }
