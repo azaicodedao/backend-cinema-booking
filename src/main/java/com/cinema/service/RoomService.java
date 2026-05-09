@@ -9,7 +9,9 @@ import com.cinema.mapper.SeatMapper;
 import com.cinema.repository.RoomRepository;
 import com.cinema.repository.RoomTypeRepository;
 import com.cinema.repository.SeatRepository;
+import com.cinema.repository.SeatTypeRepository;
 import com.cinema.repository.ShowtimeRepository;
+import com.cinema.entity.SeatType;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -27,6 +29,7 @@ public class RoomService {
     RoomRepository roomRepository;
     RoomTypeRepository roomTypeRepository;
     SeatRepository seatRepository;
+    SeatTypeRepository seatTypeRepository;
     RoomMapper roomMapper;
     SeatMapper seatMapper;
     ShowtimeRepository showtimeRepository;
@@ -41,6 +44,38 @@ public class RoomService {
         return seatRepository.findByRoomId(roomId).stream()
                 .map(seatMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<SeatDto> updateRoomSeats(Integer roomId, List<SeatDto> seatDtos) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + roomId));
+
+        for (SeatDto dto : seatDtos) {
+            Seat seat = seatRepository.findById(dto.getId())
+                    .orElseThrow(() -> new RuntimeException("Seat not found"));
+            if (!seat.getRoom().getId().equals(roomId))
+                continue;
+
+            String typeName = dto.getTypeName();
+            if (typeName == null || typeName.equalsIgnoreCase("NORMAL")) {
+                // Find NORMAL or set to null
+                SeatType normalType = seatTypeRepository.findByName("NORMAL").orElse(null);
+                seat.setSeatType(normalType);
+            } else {
+                SeatType type = seatTypeRepository.findByName(typeName)
+                        .orElseGet(() -> {
+                            SeatType newType = new SeatType();
+                            newType.setName(typeName);
+                            newType.setSurcharge(java.math.BigDecimal.valueOf(20000));
+                            return seatTypeRepository.save(newType);
+                        });
+                seat.setSeatType(type);
+            }
+            seatRepository.save(seat);
+        }
+
+        return getRoomSeats(roomId);
     }
 
     @Transactional
@@ -66,16 +101,42 @@ public class RoomService {
     public RoomDto updateRoom(Integer id, RoomDto roomDto) {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + id));
-        if (roomDto.getName() != null) {
+        if (roomDto.getName() != null)
             room.setName(roomDto.getName());
-        }
-        if (roomDto.getType() != null) {
+        if (roomDto.getType() != null)
             room.setRoomType(roomTypeRepository.findByName(roomDto.getType())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng: " + roomDto.getType())));
-        }
+
         if (roomDto.getStatus() != null) {
             room.setStatus(com.cinema.enums.RoomStatus.valueOf(roomDto.getStatus()));
         }
+
+        if (roomDto.getTotalRows() != null && roomDto.getTotalCols() != null) {
+            boolean layoutChanged = !roomDto.getTotalRows().equals(room.getTotalRows()) ||
+                                    !roomDto.getTotalCols().equals(room.getTotalCols());
+            if (layoutChanged) {
+                if (showtimeRepository.existsByRoomId(id)) {
+                    throw new RuntimeException("Không thể thay đổi cấu hình ghế khi phòng đang có suất chiếu được lên lịch.");
+                }
+
+                room.setTotalRows(roomDto.getTotalRows());
+                room.setTotalCols(roomDto.getTotalCols());
+
+                seatRepository.deleteByRoomId(id);
+
+                for (int i = 0; i < room.getTotalRows(); i++) {
+                    char rowChar = (char) ('A' + i);
+                    for (int j = 1; j <= room.getTotalCols(); j++) {
+                        Seat seat = new Seat();
+                        seat.setRoom(room);
+                        seat.setRowLabel(String.valueOf(rowChar));
+                        seat.setColNumber(j);
+                        seatRepository.save(seat);
+                    }
+                }
+            }
+        }
+
         Room savedRoom = roomRepository.save(room);
         return roomMapper.toDto(savedRoom);
     }
@@ -91,7 +152,7 @@ public class RoomService {
     @Transactional
     public void deleteRoom(Integer id) {
         if (showtimeRepository.existsByRoomId(id)) {
-            throw new RuntimeException("Không thể xóa phòng vì phòng có suất chiếu");
+            throw new RuntimeException("Không thể xoá phòng đang có suất chiếu. Vui lòng xoá suất chiếu trước.");
         }
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + id));

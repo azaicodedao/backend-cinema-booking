@@ -31,6 +31,15 @@ public class RoomController {
         return ResponseEntity.ok(RestResponse.success(seats, "Fetched seats successfully"));
     }
 
+    @PutMapping("/{id}/seats")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<RestResponse<List<SeatDto>>> updateRoomSeats(
+            @PathVariable Integer id,
+            @RequestBody List<SeatDto> seatDtos) {
+        List<SeatDto> seats = roomService.updateRoomSeats(id, seatDtos);
+        return ResponseEntity.ok(RestResponse.success(seats, "Updated room seats successfully"));
+    }
+
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<RestResponse<RoomDto>> createRoom(@RequestBody RoomDto roomDto) {
