@@ -70,9 +70,13 @@ public class ShowtimeService {
             }
         }
 
-        // 2. Lấy tất cả showtimes của ngày, sắp xếp theo giờ tăng dần
-        List<Showtime> showtimes = showtimeRepository
-                .findByShowDateOrderByStartTimeAsc(targetDate != null ? targetDate : LocalDate.now());
+        // 2. Lấy showtimes: Nếu có date thì lấy đúng ngày, nếu không thì lấy tất cả từ hôm nay trở đi
+        List<Showtime> showtimes;
+        if (targetDate != null) {
+            showtimes = showtimeRepository.findByShowDateOrderByStartTimeAsc(targetDate);
+        } else {
+            showtimes = showtimeRepository.findByShowDateGreaterThanEqualOrderByStartTimeAsc(LocalDate.now());
+        }
 
         if (showtimes.isEmpty()) {
             return Collections.emptyList();

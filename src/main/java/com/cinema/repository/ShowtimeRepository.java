@@ -26,6 +26,12 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
     List<Showtime> findByShowDateOrderByStartTimeAsc(LocalDate showDate);
 
     /**
+     * Lấy tất cả suất chiếu từ một ngày nhất định trở đi.
+     * Dùng để tải toàn bộ lịch chiếu một lần duy nhất cho Frontend.
+     */
+    List<Showtime> findByShowDateGreaterThanEqualOrderByStartTimeAsc(LocalDate startDate);
+
+    /**
      * Đếm số ghế còn trống của một suất chiếu dựa trên tổng ghế của phòng
      * trừ đi số ghế đã được book (trạng thái CONFIRMED).
      */

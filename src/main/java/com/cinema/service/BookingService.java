@@ -241,14 +241,26 @@ public class BookingService {
                 .map(t -> t.getSeat().getRowLabel() + t.getSeat().getColNumber())
                 .toList();
 
-        List<BookingDetailDTO.TicketInfo> ticketInfos = tickets.stream()
-                .map(t -> BookingDetailDTO.TicketInfo.builder()
+        List<BookingDetailDTO.TicketInfo> ticketInfos = new ArrayList<>();
+        if (tickets != null) {
+            for (Ticket t : tickets) {
+                String label = "Unknown";
+                String type = "Standard";
+                if (t.getSeat() != null) {
+                    label = (t.getSeat().getRowLabel() != null ? t.getSeat().getRowLabel() : "")
+                          + (t.getSeat().getColNumber() != null ? t.getSeat().getColNumber() : "");
+                    if (t.getSeat().getSeatType() != null) {
+                        type = t.getSeat().getSeatType().getName();
+                    }
+                }
+                ticketInfos.add(BookingDetailDTO.TicketInfo.builder()
                         .ticketId(t.getId())
-                        .seatLabel(t.getSeat().getRowLabel() + t.getSeat().getColNumber())
-                        .seatType(t.getSeat().getSeatType().getName())
+                        .seatLabel(label)
+                        .seatType(type)
                         .qrCode(t.getQrCode())
-                        .build())
-                .toList();
+                        .build());
+            }
+        }
 
         long elapsedSeconds = java.time.Duration.between(booking.getCreatedAt(), java.time.LocalDateTime.now()).getSeconds();
         int remainingSeconds = Math.max(0, 600 - (int) elapsedSeconds);
@@ -263,6 +275,7 @@ public class BookingService {
                 .movieTitle(booking.getShowtime().getMovie().getTitle())
                 .posterUrl(booking.getShowtime().getMovie().getPosterUrl())
                 .roomName(booking.getShowtime().getRoom().getName())
+                .roomType(booking.getShowtime().getRoom().getRoomType().getName())
                 .showtimeStart(booking.getShowtime().getStartTime())
                 .seatLabels(seatLabels)
                 .numberOfTickets(tickets.size())
@@ -289,31 +302,64 @@ public class BookingService {
     public List<BookingResponseDTO> getUserBookings(Integer userId) {
         List<Booking> bookings = bookingRepository.findByUserId(userId);
         
-        return bookings.stream().map(booking -> {
-            List<Ticket> tickets = ticketRepository.findByBooking(booking);
-            List<String> seatLabels = tickets.stream()
-                    .map(t -> t.getSeat().getRowLabel() + t.getSeat().getColNumber())
-                    .toList();
+        List<BookingResponseDTO> result = new ArrayList<>();
+        for (Booking booking : bookings) {
+            try {
+                List<Ticket> tickets = ticketRepository.findByBooking(booking);
+                List<String> seatLabels = new ArrayList<>();
+                if (tickets != null) {
+                    for (Ticket t : tickets) {
+                        if (t.getSeat() != null) {
+                            String label = (t.getSeat().getRowLabel() != null ? t.getSeat().getRowLabel() : "")
+                                         + (t.getSeat().getColNumber() != null ? t.getSeat().getColNumber() : "");
+                            if (!label.isEmpty()) seatLabels.add(label);
+                        }
+                    }
+                }
 
-            long elapsedSeconds = java.time.Duration.between(booking.getCreatedAt(), java.time.LocalDateTime.now()).getSeconds();
-            int remainingSeconds = Math.max(0, 600 - (int) elapsedSeconds);
+                // Null-safe check for times
+                LocalDateTime createdAt = booking.getCreatedAt() != null ? booking.getCreatedAt() : LocalDateTime.now();
+                long elapsedSeconds = java.time.Duration.between(createdAt, java.time.LocalDateTime.now()).getSeconds();
+                int remainingSeconds = Math.max(0, 600 - (int) elapsedSeconds);
 
-            return BookingResponseDTO.builder()
-                    .bookingId(booking.getId())
-                    .movieId(booking.getShowtime().getMovie().getId())
-                    .bookingCode(booking.getBookingCode())
-                    .movieTitle(booking.getShowtime().getMovie().getTitle())
-                    .roomName(booking.getShowtime().getRoom().getName())
-                    .showtimeStart(booking.getShowtime().getStartTime())
-                    .seatLabels(seatLabels)
-                    .totalPrice(booking.getTotalPrice().doubleValue())
-                    .status(booking.getStatus().name())
-                    .createdAt(booking.getCreatedAt())
-                    .paymentCountdownSeconds(remainingSeconds)
-                    .numberOfTickets(tickets.size())
-                    .hasReviewed(reviewRepository.existsByBookingId(booking.getId()))
-                    .build();
-        }).toList();
+                // Null-safe check for associations
+                String movieTitle = "Unknown Movie";
+                Integer movieId = null;
+                String roomName = "Unknown Room";
+                LocalDateTime startTime = null;
+
+                if (booking.getShowtime() != null) {
+                    startTime = booking.getShowtime().getStartTime();
+                    if (booking.getShowtime().getMovie() != null) {
+                        movieTitle = booking.getShowtime().getMovie().getTitle();
+                        movieId = booking.getShowtime().getMovie().getId();
+                    }
+                    if (booking.getShowtime().getRoom() != null) {
+                        roomName = booking.getShowtime().getRoom().getName();
+                    }
+                }
+
+                result.add(BookingResponseDTO.builder()
+                        .bookingId(booking.getId())
+                        .movieId(movieId)
+                        .bookingCode(booking.getBookingCode())
+                        .movieTitle(movieTitle)
+                        .roomName(roomName)
+                        .showtimeStart(startTime)
+                        .seatLabels(seatLabels)
+                        .totalPrice(booking.getTotalPrice() != null ? booking.getTotalPrice().doubleValue() : 0.0)
+                        .status(booking.getStatus() != null ? booking.getStatus().name() : "UNKNOWN")
+                        .createdAt(createdAt)
+                        .paymentCountdownSeconds(remainingSeconds)
+                        .numberOfTickets(tickets != null ? tickets.size() : 0)
+                        .hasReviewed(reviewRepository.existsByBookingId(booking.getId()))
+                        .build());
+            } catch (Exception e) {
+                // Log and skip this specific corrupt booking instead of crashing the whole list
+                System.err.println("Error mapping booking ID " + booking.getId() + ": " + e.getMessage());
+            }
+        }
+        return result;
     }
 
     /**
