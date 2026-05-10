@@ -21,7 +21,8 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
 
        List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, LocalDateTime dateTime);
 
-       // Mới thêm
+       boolean existsByShowtimeId(Integer showtimeId);
+
        boolean existsByShowtimeIdAndStatus(Integer showtimeId, com.cinema.enums.BookingStatus status);
 
        @Query("SELECT new com.cinema.dto.MovieBookingStatDto(m.id, m.title, COUNT(b), COALESCE(SUM(b.totalPrice), 0)) "

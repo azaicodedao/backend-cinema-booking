@@ -6,6 +6,7 @@ import com.cinema.dto.ShowtimeSnapshotDto;
 import com.cinema.entity.Movie;
 import com.cinema.entity.Room;
 import com.cinema.entity.Showtime;
+import com.cinema.entity.Booking;
 import com.cinema.mapper.ShowtimeMapper;
 import com.cinema.repository.MovieRepository;
 import com.cinema.repository.ReviewRepository;
@@ -305,12 +306,18 @@ public class ShowtimeService {
         Showtime showtime = showtimeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Showtime not found"));
 
-        if (bookingRepository.existsByShowtimeIdAndStatus(id, BookingStatus.CONFIRMED)) {
-            throw new IllegalArgumentException(
-                    "Không thể xoá suất chiếu đã có khách đặt vé. Vui lòng huỷ các vé liên quan trước.");
-        }
+        boolean hasConfirmedOrPending = bookingRepository.existsByShowtimeIdAndStatus(id, BookingStatus.CONFIRMED)
+                || bookingRepository.existsByShowtimeIdAndStatus(id, BookingStatus.PENDING);
 
-        showtime.setStatus(ShowtimeStatus.CLOSED);
-        showtimeRepository.save(showtime);
+        if (hasConfirmedOrPending) {
+            showtime.setStatus(ShowtimeStatus.CLOSED);
+            showtimeRepository.save(showtime);
+        } else {
+            List<Booking> relatedBookings = bookingRepository.findByShowtimeId(id);
+            if (!relatedBookings.isEmpty()) {
+                bookingRepository.deleteAll(relatedBookings);
+            }
+            showtimeRepository.delete(showtime);
+        }
     }
 }

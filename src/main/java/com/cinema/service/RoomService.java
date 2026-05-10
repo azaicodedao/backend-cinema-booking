@@ -59,7 +59,6 @@ public class RoomService {
 
             String typeName = dto.getTypeName();
             if (typeName == null || typeName.equalsIgnoreCase("NORMAL")) {
-                // Find NORMAL or set to null
                 SeatType normalType = seatTypeRepository.findByName("NORMAL").orElse(null);
                 seat.setSeatType(normalType);
             } else {
@@ -113,10 +112,11 @@ public class RoomService {
 
         if (roomDto.getTotalRows() != null && roomDto.getTotalCols() != null) {
             boolean layoutChanged = !roomDto.getTotalRows().equals(room.getTotalRows()) ||
-                                    !roomDto.getTotalCols().equals(room.getTotalCols());
+                    !roomDto.getTotalCols().equals(room.getTotalCols());
             if (layoutChanged) {
                 if (showtimeRepository.existsByRoomId(id)) {
-                    throw new RuntimeException("Không thể thay đổi cấu hình ghế khi phòng đang có suất chiếu được lên lịch.");
+                    throw new RuntimeException(
+                            "Không thể thay đổi cấu hình ghế khi phòng đang có suất chiếu được lên lịch.");
                 }
 
                 room.setTotalRows(roomDto.getTotalRows());
