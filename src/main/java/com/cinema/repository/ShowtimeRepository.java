@@ -102,4 +102,15 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable);
+
+    @Query("SELECT s.id FROM Showtime s WHERE s.status = com.cinema.enums.ShowtimeStatus.OPEN AND s.endTime <= :now")
+    List<Integer> findExpiredShowtimeIds(@Param("now") LocalDateTime now);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("""
+        UPDATE Showtime s 
+        SET s.status = com.cinema.enums.ShowtimeStatus.CLOSED 
+        WHERE s.id IN :ids
+    """)
+    int closeShowtimesByIds(@Param("ids") List<Integer> ids);
 }

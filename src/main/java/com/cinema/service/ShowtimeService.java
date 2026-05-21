@@ -39,6 +39,11 @@ public class ShowtimeService {
     ReviewRepository reviewRepository;
     BookingRepository bookingRepository;
 
+    /**
+     * Lấy tất cả các suất chiếu.
+     * 
+     * @return Danh sách ShowtimeDto.
+     */
     @Transactional(readOnly = true)
     public List<ShowtimeDto> getAllShowtimes() {
         return showtimeRepository.findAll().stream()
@@ -46,6 +51,12 @@ public class ShowtimeService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lấy danh sách các suất chiếu theo ID của phim.
+     * 
+     * @param movieId ID của phim.
+     * @return Danh sách ShowtimeDto.
+     */
     @Transactional(readOnly = true)
     public List<ShowtimeDto> getShowtimesByMovie(Integer movieId) {
         return showtimeRepository.findByMovieId(movieId).stream()
@@ -57,6 +68,14 @@ public class ShowtimeService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lấy danh sách các suất chiếu theo ngày.
+     * Tự động sửa các bản ghi cũ bị thiếu showDate (chỉ quét các bản ghi bị
+     * null).
+     *
+     * @param targetDate Ngày cần lấy danh sách suất chiếu.
+     * @return Danh sách MovieScheduleDto.
+     */
     @Transactional(readOnly = true)
     public List<MovieScheduleDto> getScheduleByDate(LocalDate targetDate) {
         // 1. Tự động sửa các bản ghi cũ bị thiếu showDate (chỉ quét các bản ghi bị
@@ -71,7 +90,8 @@ public class ShowtimeService {
             }
         }
 
-        // 2. Lấy showtimes: Nếu có date thì lấy đúng ngày, nếu không thì lấy tất cả từ hôm nay trở đi
+        // 2. Lấy showtimes: Nếu có date thì lấy đúng ngày, nếu không thì lấy tất cả từ
+        // hôm nay trở đi
         List<Showtime> showtimes;
         if (targetDate != null) {
             showtimes = showtimeRepository.findByShowDateOrderByStartTimeAsc(targetDate);
@@ -310,18 +330,18 @@ public class ShowtimeService {
         Showtime showtime = showtimeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Showtime not found"));
 
-        boolean hasConfirmedOrPending = bookingRepository.existsByShowtimeIdAndStatus(id, BookingStatus.CONFIRMED)
-                || bookingRepository.existsByShowtimeIdAndStatus(id, BookingStatus.PENDING);
+        // Kiểm tra xem suất chiếu này đã có bất kỳ đơn đặt vé (Booking) nào chưa (kể cả
+        // Hủy/Lỗi/Thành công)
+        boolean hasAnyBooking = bookingRepository.existsByShowtimeId(id);
 
-        if (hasConfirmedOrPending) {
+        if (!hasAnyBooking) {
+            // Chưa có thao tác đặt vé nào -> Xóa vĩnh viễn (Hard Delete)
+            showtimeRepository.delete(showtime);
+        } else {
+            // Đã có lịch sử đặt vé -> Chỉ chuyển trạng thái sang CLOSED (Soft Delete) để
+            // bảo toàn dữ liệu đối soát
             showtime.setStatus(ShowtimeStatus.CLOSED);
             showtimeRepository.save(showtime);
-        } else {
-            List<Booking> relatedBookings = bookingRepository.findByShowtimeId(id);
-            if (!relatedBookings.isEmpty()) {
-                bookingRepository.deleteAll(relatedBookings);
-            }
-            showtimeRepository.delete(showtime);
         }
     }
 }

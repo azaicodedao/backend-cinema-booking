@@ -20,6 +20,7 @@ public class BookingDetailDTO {
     // --- THÔNG TIN ĐỊNH DANH & PHIM ---
     private Integer bookingId;      // ID định danh đơn hàng trong Database
     private Integer movieId;        // Dùng ở trang Đánh giá (MovieReview.jsx) để gửi API đánh giá đúng phim
+    private Integer showtimeId;     // ID của suất chiếu (dùng để quay lại chọn ghế)
     private String bookingCode;     // Hiển thị làm Mã đặt vé (VD: #ABCD123) ở TicketView.jsx
     private String movieTitle;      // Hiển thị tên phim ở các trang Pay, OrderSummary, TicketView, MovieReview
     private String posterUrl;       // Dùng hiển thị ảnh bìa phim cực kỳ quan trọng ở trang MovieReview.jsx

@@ -24,12 +24,26 @@ public class GenreService {
     GenreMapper genreMapper;
     MovieRepository movieRepository;
 
+    /*
+     * Lấy tất cả các thể loại phim
+     * 
+     * @return Danh sách các thể loại phim
+     */
     public List<GenreDto> getAllGenres() {
         return genreRepository.findAll().stream()
                 .map(genreMapper::toDto)
                 .collect(Collectors.toList());
     }
 
+    /*
+     * Tạo thể loại mới
+     * 
+     * @param genreDto: Thông tin thể loại mới
+     * 
+     * @return Thể loại mới
+     * 
+     * @throws RuntimeException nếu thể loại đã tồn tại
+     */
     @Transactional
     public GenreDto createGenre(GenreDto genreDto) {
         if (genreRepository.existsByNameIgnoreCase(genreDto.getName())) {
@@ -40,6 +54,17 @@ public class GenreService {
         return genreMapper.toDto(saved);
     }
 
+    /*
+     * Cập nhật thể loại
+     * 
+     * @param id: ID của thể loại cần cập nhật
+     * 
+     * @param genreDto: Thông tin thể loại cần cập nhật
+     * 
+     * @return Thể loại đã cập nhật
+     * 
+     * @throws RuntimeException nếu không tìm thấy thể loại hoặc thể loại đã tồn tại
+     */
     @Transactional
     public GenreDto updateGenre(Integer id, GenreDto genreDto) {
         Genre genre = genreRepository.findById(id)
@@ -52,6 +77,14 @@ public class GenreService {
         return genreMapper.toDto(saved);
     }
 
+    /*
+     * Xoá thể loại
+     * 
+     * @param id: ID của thể loại cần xoá
+     * 
+     * @throws RuntimeException nếu không tìm thấy thể loại hoặc thể loại đang được
+     * sử dụng
+     */
     @Transactional
     public void deleteGenre(Integer id) {
         Genre genre = genreRepository.findById(id)

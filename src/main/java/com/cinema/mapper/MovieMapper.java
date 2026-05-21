@@ -42,22 +42,12 @@ public interface MovieMapper {
     @Mapping(target = "status", expression = "java(movieDto.getStatus() != null ? com.cinema.enums.MovieStatus.valueOf(movieDto.getStatus()) : null)")
     @Mapping(target = "posterUrl", ignore = true)
     @Mapping(target = "genres", ignore = true)
-    @Mapping(target = "country", ignore = true)
-    @Mapping(target = "director", ignore = true)
-    @Mapping(target = "actors", ignore = true)
-    @Mapping(target = "trailerUrl", ignore = true)
-    @Mapping(target = "releaseDate", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     Movie toEntity(MovieDto movieDto);
 
     @Mapping(target = "status", expression = "java(movieDto.getStatus() != null ? com.cinema.enums.MovieStatus.valueOf(movieDto.getStatus()) : null)")
     @Mapping(target = "posterUrl", ignore = true)
     @Mapping(target = "genres", ignore = true)
-    @Mapping(target = "country", ignore = true)
-    @Mapping(target = "director", ignore = true)
-    @Mapping(target = "actors", ignore = true)
-    @Mapping(target = "trailerUrl", ignore = true)
-    @Mapping(target = "releaseDate", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
 
     @Mapping(target = "id", ignore = true)

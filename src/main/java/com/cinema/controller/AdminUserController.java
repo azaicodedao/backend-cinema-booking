@@ -1,8 +1,8 @@
 package com.cinema.controller;
 
+import com.cinema.dto.response.AdminUserResponse;
 import com.cinema.dto.response.RestResponse;
 import com.cinema.enums.Role;
-import com.cinema.entity.User;
 import com.cinema.enums.UserStatus;
 import com.cinema.security.services.UserDetailsImpl;
 import com.cinema.service.AdminUserService;
@@ -33,7 +33,7 @@ public class AdminUserController {
     }
 
     @GetMapping
-    public ResponseEntity<RestResponse<Page<User>>> getUsers(
+    public ResponseEntity<RestResponse<Page<AdminUserResponse>>> getUsers(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Role role,
             @RequestParam(required = false) UserStatus status,
@@ -41,14 +41,14 @@ public class AdminUserController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<User> users = adminUserService.getUsers(keyword, role, status, pageable);
+        Page<AdminUserResponse> users = adminUserService.getUsers(keyword, role, status, pageable);
         return ResponseEntity.ok(RestResponse.success(users, "Users fetched successfully"));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RestResponse<User>> getUserDetail(@PathVariable Integer id) {
+    public ResponseEntity<RestResponse<AdminUserResponse>> getUserDetail(@PathVariable Integer id) {
         try {
-            User user = adminUserService.getUserDetail(id);
+            AdminUserResponse user = adminUserService.getUserDetail(id);
             return ResponseEntity.ok(RestResponse.success(user, "User fetched successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

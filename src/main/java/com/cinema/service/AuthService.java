@@ -34,111 +34,118 @@ import com.cinema.enums.UserStatus;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuthService {
 
-    final AuthenticationManager authenticationManager;
-    final UserRepository userRepository;
-    final RefreshTokenRepository refreshTokenRepository;
-    final PasswordEncoder encoder;
-    final JwtUtils jwtUtils;
+        final AuthenticationManager authenticationManager;
+        final UserRepository userRepository;
+        final RefreshTokenRepository refreshTokenRepository;
+        final PasswordEncoder encoder;
+        final JwtUtils jwtUtils;
 
-    @Value("${jwt.refreshExpirationDay:7}")
-    long refreshExpirationDays;
+        @Value("${jwt.refreshExpirationDay:7}")
+        long refreshExpirationDays;
 
-    @Transactional
-    public TokenResponse authenticateUser(LoginRequest loginRequest) {
-        String email = loginRequest.getEmail().trim();
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, loginRequest.getPassword()));
+        /*
+         * Logic: User nhập email/sdt + password
+         * Spring Security kiểm tra username/password -> Tạo Authentication object
+         * Nếu thành công -> set vào SecurityContextHolder
+         * Trả về JWT Token + Refresh Token
+         * Refresh Token lưu vào DB + set hết hạn sau 7 ngày
+         */
+        @Transactional
+        public TokenResponse authenticateUser(LoginRequest loginRequest) {
+                String email = loginRequest.getEmail().trim();
+                Authentication authentication = authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(email, loginRequest.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        
-        String jwt = jwtUtils.generateJwtToken(authentication);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+                String jwt = jwtUtils.generateJwtToken(authentication);
 
-        User user = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        user.setLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
+                UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+                List<String> roles = userDetails.getAuthorities().stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .collect(Collectors.toList());
 
-        refreshTokenRepository.deleteByUser_Id(user.getId());
+                User user = userRepository.findById(userDetails.getId())
+                                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                user.setLastLoginAt(LocalDateTime.now());
+                userRepository.save(user);
 
-        String refreshTokenString = UUID.randomUUID().toString();
-        RefreshToken refreshToken = RefreshToken.builder()
-                .user(user)
-                .token(refreshTokenString)
-                .expiryDate(LocalDateTime.now().plusDays(refreshExpirationDays))
-                .isRevoked(false)
-                .build();
-        refreshTokenRepository.save(refreshToken);
+                refreshTokenRepository.deleteByUser_Id(user.getId());
 
-        return TokenResponse.builder()
-                .accessToken(jwt)
-                .refreshToken(refreshTokenString)
-                .user(TokenResponse.UserInfo.builder()
-                        .id(user.getId())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .avatarUrl(user.getAvatarUrl())
-                        .role(user.getRole().name())
-                        .build())
-                .build();
-    }
+                String refreshTokenString = UUID.randomUUID().toString();
+                RefreshToken refreshToken = RefreshToken.builder()
+                                .user(user)
+                                .token(refreshTokenString)
+                                .expiryDate(LocalDateTime.now().plusDays(refreshExpirationDays))
+                                .isRevoked(false)
+                                .build();
+                refreshTokenRepository.save(refreshToken);
 
-    public String registerUser(SignupRequest signUpRequest) {
-        String email = signUpRequest.getEmail().trim();
-        if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Error: Email is already in use!");
+                return TokenResponse.builder()
+                                .accessToken(jwt)
+                                .refreshToken(refreshTokenString)
+                                .user(TokenResponse.UserInfo.builder()
+                                                .id(user.getId())
+                                                .fullName(user.getFullName())
+                                                .email(user.getEmail())
+                                                .avatarUrl(user.getAvatarUrl())
+                                                .role(user.getRole().name())
+                                                .build())
+                                .build();
         }
 
-        User user = new User();
-        user.setEmail(email);
-        user.setPassword(encoder.encode(signUpRequest.getPassword()));
-        user.setFullName(signUpRequest.getFullName());
-        user.setStatus(UserStatus.ACTIVE);
-        user.setRole(Role.CUSTOMER);
+        public String registerUser(SignupRequest signUpRequest) {
+                String email = signUpRequest.getEmail().trim();
+                if (userRepository.existsByEmail(email)) {
+                        throw new IllegalArgumentException("Error: Email is already in use!");
+                }
 
-        userRepository.save(user);
+                User user = new User();
+                user.setEmail(email);
+                user.setPassword(encoder.encode(signUpRequest.getPassword()));
+                user.setFullName(signUpRequest.getFullName());
+                user.setStatus(UserStatus.ACTIVE);
+                user.setRole(Role.CUSTOMER);
 
-        return "User registered successfully!";
-    }
+                userRepository.save(user);
 
-    @Transactional
-    public TokenResponse refreshToken(String token) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
-
-        if (refreshToken.getIsRevoked()) {
-            throw new IllegalArgumentException("Refresh token was revoked");
+                return "User registered successfully!";
         }
 
-        if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            refreshTokenRepository.delete(refreshToken);
-            throw new IllegalArgumentException("Refresh token is expired. Please sign in again");
+        @Transactional
+        public TokenResponse refreshToken(String token) {
+                RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+                                .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
+
+                if (refreshToken.getIsRevoked()) {
+                        throw new IllegalArgumentException("Refresh token was revoked");
+                }
+
+                if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+                        refreshTokenRepository.delete(refreshToken);
+                        throw new IllegalArgumentException("Refresh token is expired. Please sign in again");
+                }
+
+                User user = refreshToken.getUser();
+                String newAccessToken = jwtUtils.generateRefreshToken(user.getEmail(), 15 * 60 * 1000);
+
+                List<String> roles = List.of(user.getRole().name());
+
+                return TokenResponse.builder()
+                                .accessToken(newAccessToken)
+                                .refreshToken(token)
+                                .user(TokenResponse.UserInfo.builder()
+                                                .id(user.getId())
+                                                .fullName(user.getFullName())
+                                                .email(user.getEmail())
+                                                .avatarUrl(user.getAvatarUrl())
+                                                .role(user.getRole().name())
+                                                .build())
+                                .build();
         }
 
-        User user = refreshToken.getUser();
-        String newAccessToken = jwtUtils.generateRefreshToken(user.getEmail(), 15 * 60 * 1000); 
-
-        List<String> roles = List.of(user.getRole().name());
-
-        return TokenResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(token)
-                .user(TokenResponse.UserInfo.builder()
-                        .id(user.getId())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .avatarUrl(user.getAvatarUrl())
-                        .role(user.getRole().name())
-                        .build())
-                .build();
-    }
-
-    @Transactional
-    public void logout(Integer userId) {
-        refreshTokenRepository.deleteByUser_Id(userId);
-    }
+        @Transactional
+        public void logout(Integer userId) {
+                refreshTokenRepository.deleteByUser_Id(userId);
+        }
 }

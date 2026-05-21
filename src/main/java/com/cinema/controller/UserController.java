@@ -1,7 +1,7 @@
 package com.cinema.controller;
 
 import com.cinema.dto.response.RestResponse;
-import com.cinema.entity.User;
+import com.cinema.dto.response.UserProfileResponse;
 import com.cinema.dto.request.ChangePasswordRequest;
 import com.cinema.dto.request.UpdateProfileRequest;
 import com.cinema.security.services.UserDetailsImpl;
@@ -29,10 +29,10 @@ public class UserController {
 
     @GetMapping({"/profile", "/me/profile"})
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<RestResponse<User>> getProfile() {
+    public ResponseEntity<RestResponse<UserProfileResponse>> getProfile() {
         try {
-            User user = userService.getProfile(getCurrentUserId());
-            return ResponseEntity.ok(RestResponse.success(user, "Profile fetched successfully"));
+            UserProfileResponse profile = userService.getProfile(getCurrentUserId());
+            return ResponseEntity.ok(RestResponse.success(profile, "Profile fetched successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(RestResponse.error(404, "Not Found", e.getMessage()));
@@ -41,10 +41,10 @@ public class UserController {
 
     @PutMapping({"/profile", "/me/profile"})
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<RestResponse<User>> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+    public ResponseEntity<RestResponse<UserProfileResponse>> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         try {
-            User updatedUser = userService.updateProfile(getCurrentUserId(), request);
-            return ResponseEntity.ok(RestResponse.success(updatedUser, "Profile updated successfully"));
+            UserProfileResponse updatedProfile = userService.updateProfile(getCurrentUserId(), request);
+            return ResponseEntity.ok(RestResponse.success(updatedProfile, "Profile updated successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(RestResponse.error(400, "Bad Request", e.getMessage()));

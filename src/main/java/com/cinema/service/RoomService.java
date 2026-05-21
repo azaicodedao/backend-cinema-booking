@@ -34,18 +34,36 @@ public class RoomService {
     SeatMapper seatMapper;
     ShowtimeRepository showtimeRepository;
 
+    /**
+     * Lấy tất cả các phòng
+     * 
+     * @return danh sách các phòng
+     */
     public List<RoomDto> getAllRooms() {
         return roomRepository.findAll().stream()
                 .map(roomMapper::toDto)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lấy tất cả các ghế trong một phòng
+     * 
+     * @param roomId ID của phòng
+     * @return danh sách các ghế
+     */
     public List<SeatDto> getRoomSeats(Integer roomId) {
         return seatRepository.findByRoomId(roomId).stream()
                 .map(seatMapper::toDto)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Cập nhật loại ghế trong phòng
+     * 
+     * @param roomId   ID của phòng
+     * @param seatDtos Danh sách ghế cần cập nhật
+     * @return Danh sách ghế đã cập nhật
+     */
     @Transactional
     public List<SeatDto> updateRoomSeats(Integer roomId, List<SeatDto> seatDtos) {
         Room room = roomRepository.findById(roomId)
@@ -77,9 +95,25 @@ public class RoomService {
         return getRoomSeats(roomId);
     }
 
+    /**
+     * Tạo phòng mới
+     * 
+     * @param roomDto Thông tin phòng
+     * @return Phòng đã tạo
+     */
     @Transactional
     public RoomDto createRoom(RoomDto roomDto) {
         Room room = roomMapper.toEntity(roomDto);
+
+        // Gán loại phòng (RoomType) từ DB
+        if (roomDto.getType() != null) {
+            room.setRoomType(roomTypeRepository.findByName(roomDto.getType())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng: " + roomDto.getType())));
+        }
+
+        // Thiết lập trạng thái mặc định là ACTIVE
+        room.setStatus(com.cinema.enums.RoomStatus.ACTIVE);
+
         Room savedRoom = roomRepository.save(room);
 
         for (int i = 0; i < savedRoom.getTotalRows(); i++) {
@@ -96,6 +130,13 @@ public class RoomService {
         return roomMapper.toDto(savedRoom);
     }
 
+    /**
+     * Sửa đổi phòng
+     * 
+     * @param id      ID của phòng
+     * @param roomDto Thông tin phòng
+     * @return Phòng đã sửa
+     */
     @Transactional
     public RoomDto updateRoom(Integer id, RoomDto roomDto) {
         Room room = roomRepository.findById(id)
@@ -156,6 +197,10 @@ public class RoomService {
         }
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + id));
+
+        // Xoá toàn bộ ghế thuộc phòng trước để tránh lỗi ràng buộc khoá ngoại
+        seatRepository.deleteByRoomId(id);
+
         roomRepository.delete(room);
     }
 }

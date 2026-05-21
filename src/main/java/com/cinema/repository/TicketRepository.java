@@ -24,4 +24,26 @@ public interface TicketRepository extends JpaRepository<Ticket, Integer> {
      * @return Tất cả vé thuộc các đơn hàng đó.
      */
     List<Ticket> findByBookingIn(Collection<Booking> bookings);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(value = """
+        UPDATE tickets t 
+        INNER JOIN bookings b ON t.booking_id = b.id 
+        SET t.status = 'USED' 
+        WHERE t.status = 'VALID' 
+        AND b.showtime_id IN :showtimeIds
+    """, nativeQuery = true)
+    int markTicketsAsUsedByShowtimeIds(@org.springframework.data.repository.query.Param("showtimeIds") List<Integer> showtimeIds);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(value = """
+        UPDATE tickets t 
+        INNER JOIN bookings b ON t.booking_id = b.id 
+        INNER JOIN showtimes s ON b.showtime_id = s.id 
+        SET t.status = 'USED' 
+        WHERE t.status = 'VALID' 
+        AND s.end_time <= :now
+    """, nativeQuery = true)
+    int markExpiredShowtimeTicketsAsUsed(@org.springframework.data.repository.query.Param("now") java.time.LocalDateTime now);
 }
+

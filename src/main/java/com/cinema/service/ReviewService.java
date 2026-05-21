@@ -33,18 +33,37 @@ public class ReviewService {
     BookingRepository bookingRepository;
     ReviewMapper reviewMapper;
 
+    /**
+     * Lấy danh sách review theo movie id
+     * 
+     * @param movieId
+     * @return
+     */
     public List<ReviewDto> getReviewsByMovie(Integer movieId) {
         return reviewRepository.findByMovieId(movieId).stream()
                 .map(reviewMapper::toDto)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lấy danh sách review theo booking id
+     * 
+     * @param bookingId
+     * @return
+     */
     public ReviewDto getReviewByBookingId(Integer bookingId) {
         Review review = reviewRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Review not found for this booking"));
         return reviewMapper.toDto(review);
     }
 
+    /**
+     * Thêm review
+     * 
+     * @param reviewDto
+     * @param userId
+     * @return
+     */
     public ReviewDto addReview(ReviewDto reviewDto, Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -63,7 +82,7 @@ public class ReviewService {
 
         // Integrity check: booking must be for the specified movie
         if (!booking.getShowtime().getMovie().getId().equals(reviewDto.getMovieId())) {
-             throw new IllegalArgumentException("Booking does not match the movie being reviewed.");
+            throw new IllegalArgumentException("Booking does not match the movie being reviewed.");
         }
 
         // Validity check: one review per booking
@@ -85,6 +104,12 @@ public class ReviewService {
         return reviewMapper.toDto(saved);
     }
 
+    /**
+     * Lấy thống kê review của phim
+     * 
+     * @param movieId
+     * @return
+     */
     public ReviewSummaryDto getMovieReviewSummary(Integer movieId) {
         Double avg = reviewRepository.getAverageRatingByMovieId(movieId);
         Long count = reviewRepository.getReviewCountByMovieId(movieId);
@@ -92,8 +117,9 @@ public class ReviewService {
 
         Map<Integer, Long> dist = new HashMap<>();
         // Initialize all stars 1-5 with 0
-        for (int i = 1; i <= 5; i++) dist.put(i, 0L);
-        
+        for (int i = 1; i <= 5; i++)
+            dist.put(i, 0L);
+
         if (distRaw != null) {
             for (Object[] obj : distRaw) {
                 Integer rating = (Integer) obj[0];

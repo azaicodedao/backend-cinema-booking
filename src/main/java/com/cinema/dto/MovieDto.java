@@ -22,5 +22,9 @@ public class MovieDto {
     private String trailerUrl;
     private Boolean isFeatured;
     private String status;
+    private String country;
+    private String director;
+    private String actors;
+    private java.time.LocalDate releaseDate;
     private List<GenreDto> genres;
 }

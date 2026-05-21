@@ -16,14 +16,15 @@ public class AuditLogService {
     AuditLogRepository auditLogRepository;
 
     @Transactional
-    public void logAction(String action, Integer adminId, Integer targetUserId, String oldValue, String newValue, String description) {
+    public void logAction(String action, Integer adminId, Integer targetUserId, String oldValue, String newValue,
+            String description) {
         AuditLog log = AuditLog.builder()
                 .action(action)
                 .targetType("USER")
                 .targetId(String.valueOf(targetUserId))
                 .description(description + " (Changed from " + oldValue + " to " + newValue + ")")
                 .build();
-        
+
         auditLogRepository.save(log);
     }
 }
