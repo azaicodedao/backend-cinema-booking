@@ -188,23 +188,4 @@ public class MovieController {
                     .body(RestResponse.error(400, "Upload Failed", e.getMessage()));
         }
     }
-
-    /**
-     * Phương thức dự phòng để lấy ảnh (hiện không dùng vì dùng link Cloudinary trực
-     * tiếp).
-     * 
-     * @param id ID của phim.
-     * @return Dữ liệu byte của ảnh.
-     */
-    @GetMapping("/{id}/image")
-    public ResponseEntity<byte[]> getMoviePoster(@PathVariable Integer id) {
-        try {
-            byte[] imageBytes = movieService.getMoviePoster(id);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_JPEG)
-                    .body(imageBytes);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-    }
 }
