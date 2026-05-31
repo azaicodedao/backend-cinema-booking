@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -90,27 +91,35 @@ public class ShowtimeService {
             }
         }
 
-        // 2. Lấy showtimes: Nếu có date thì lấy đúng ngày, nếu không thì lấy tất cả từ
-        // hôm nay trở đi
+        // 2. Lấy danh sách suất chiếu trong ngày dùng cho trang booking
         List<Showtime> showtimes;
+        LocalDateTime now = LocalDateTime.now();
         if (targetDate != null) {
-            showtimes = showtimeRepository.findByShowDateOrderByStartTimeAsc(targetDate);
+            if (targetDate.isBefore(now.toLocalDate())) {
+                return Collections.emptyList();
+            }
+            showtimes = showtimeRepository.findByStatusAndShowDateAndStartTimeAfterOrderByStartTimeAsc(
+                    ShowtimeStatus.OPEN,
+                    targetDate,
+                    now);
         } else {
-            showtimes = showtimeRepository.findByShowDateGreaterThanEqualOrderByStartTimeAsc(LocalDate.now());
+            showtimes = showtimeRepository.findByStatusAndStartTimeAfterOrderByStartTimeAsc(
+                    ShowtimeStatus.OPEN,
+                    now);
         }
 
         if (showtimes.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 2. Nhóm theo Movie (dùng LinkedHashMap để giữ thứ tự insert)
+        // 3. Nhóm theo Movie (dùng LinkedHashMap để giữ thứ tự insert)
         Map<Movie, List<Showtime>> grouped = new LinkedHashMap<>();
         for (Showtime st : showtimes) {
             Movie movie = st.getMovie();
             grouped.computeIfAbsent(movie, k -> new ArrayList<>()).add(st);
         }
 
-        // 3. Chuyển đổi sang MovieScheduleDto
+        // 4. Chuyển đổi sang MovieScheduleDto
         return grouped.entrySet().stream()
                 .map(entry -> buildMovieScheduleDto(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
@@ -158,7 +167,7 @@ public class ShowtimeService {
     }
 
     /**
-     * Chuyển đổi entity Showtime thành ShowtimeSnapshotDto.
+     * Chuyển đổi entity Showtime thành ShowtimeSnapshotDto dùng cho trang đặt vé.
      * Tổng hợp chuỗi "formatAndRoom" từ loại phòng và tên phòng.
      */
     private ShowtimeSnapshotDto buildShowtimeSnapshot(Showtime st) {

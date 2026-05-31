@@ -30,6 +30,7 @@ public class SeatHoldingService {
     BookingRepository bookingRepository;
     UserRepository userRepository;
     SimpMessagingTemplate messagingTemplate;
+    ShowtimeAvailabilityService showtimeAvailabilityService;
 
     static final int HOLD_DURATION_MINUTES = 10;
 
@@ -52,6 +53,7 @@ public class SeatHoldingService {
 
         Showtime showtime = showtimeRepository.findById(showtimeId)
                 .orElseThrow(() -> new IllegalArgumentException("Showtime not found"));
+        showtimeAvailabilityService.validateBookable(showtime);
 
         if (!seat.getRoom().getId().equals(showtime.getRoom().getId())) {
             throw new IllegalArgumentException("Seat does not belong to the showtime's room");

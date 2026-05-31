@@ -26,6 +26,7 @@ public class SeatService {
         SeatRepository seatRepository;
         ShowtimeRepository showtimeRepository;
         SeatHoldingService seatHoldingService;
+        ShowtimeAvailabilityService showtimeAvailabilityService;
 
         /**
          * Lấy danh sách ghế cho một suất chiếu cụ thể.
@@ -37,6 +38,7 @@ public class SeatService {
         public SeatSelectionDto getSeatSelection(Integer showtimeId) {
                 Showtime showtime = showtimeRepository.findById(showtimeId)
                                 .orElseThrow(() -> new IllegalArgumentException("Showtime not found"));
+                showtimeAvailabilityService.validateBookable(showtime);
 
                 Room room = showtime.getRoom();
                 List<Seat> seats = seatRepository.findByRoomId(room.getId());

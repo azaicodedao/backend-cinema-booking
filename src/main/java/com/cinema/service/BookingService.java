@@ -46,6 +46,7 @@ public class BookingService {
     ReviewRepository reviewRepository;
     PaymentRepository paymentRepository;
     SimpMessagingTemplate messagingTemplate; // Tiêm WebSocket template để gửi thông báo thời gian thực
+    ShowtimeAvailabilityService showtimeAvailabilityService;
 
     /**
      * Tạo đơn đặt vé mới.
@@ -59,6 +60,7 @@ public class BookingService {
 
         Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
                 .orElseThrow(() -> new IllegalArgumentException("Showtime not found"));
+        showtimeAvailabilityService.validateBookable(showtime);
 
         List<Integer> uniqueSeatIds = request.getSeatIds().stream().distinct().toList();
         List<Seat> seats = seatRepository.findAllById(uniqueSeatIds);
@@ -123,6 +125,7 @@ public class BookingService {
     public void payBooking(Integer bookingId, String methodString) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        showtimeAvailabilityService.validateBookable(booking.getShowtime());
 
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
             throw new IllegalArgumentException("Booking already paid");
