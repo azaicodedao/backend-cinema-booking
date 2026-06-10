@@ -88,21 +88,22 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/ws-cinema/**").permitAll()
-                        
+
                         // Cho phép khách vãng lai truy cập các API chỉ đọc (GET) để duyệt web
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, 
-                            "/api/movies/**", 
-                            "/api/showtimes/**", 
-                            "/api/genres/**", 
-                            "/api/reviews/**", 
-                            "/api/rooms/**", 
-                            "/api/seats/**"
-                        ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/movies/**",
+                                "/api/showtimes/**",
+                                "/api/genres/**",
+                                "/api/reviews/**",
+                                "/api/rooms/**",
+                                "/api/seats/**")
+                        .permitAll()
 
                         // Chỉ định rõ: Mọi request vào /api/admin/** đều bắt buộc phải có quyền ADMIN
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
-                        // Yêu cầu xác thực (đăng nhập) với tất cả các request còn lại (ví dụ: đặt vé, cập nhật hồ sơ)
+                        // Yêu cầu xác thực (đăng nhập) với tất cả các request còn lại (ví dụ: đặt vé,
+                        // cập nhật hồ sơ)
                         .anyRequest().authenticated());
 
         http.authenticationProvider(authenticationProvider());
@@ -123,13 +124,16 @@ public class WebSecurityConfig {
         configuration.setAllowedOrigins(
                 Arrays.asList("http://localhost:3000", "http://localhost:3001", "http://localhost:5173"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "authorization", "Content-Type", "content-type", "x-auth-token")); // Cho phép họ
-                                                                                                         // gửi/nhận cái
-                                                                                                         // Header có
-                                                                                                         // tên là
-                                                                                                         // Authorization
-                                                                                                         // (để chứa
-                                                                                                         // token).
+        configuration.setAllowedHeaders(
+                Arrays.asList("Authorization", "authorization", "Content-Type", "content-type", "x-auth-token")); // Cho
+                                                                                                                  // phép
+                                                                                                                  // họ
+        // gửi/nhận cái
+        // Header có
+        // tên là
+        // Authorization
+        // (để chứa
+        // token).
         configuration.setExposedHeaders(Arrays.asList("x-auth-token"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

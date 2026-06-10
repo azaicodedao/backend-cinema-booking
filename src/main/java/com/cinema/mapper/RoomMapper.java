@@ -9,8 +9,11 @@ import org.mapstruct.Mapping;
 public interface RoomMapper {
     @Mapping(target = "type", source = "roomType.name")
     @Mapping(target = "surcharge", source = "roomType.surcharge")
+    @Mapping(target = "totalSeats", expression = "java(room.getTotalRows() != null && room.getTotalCols() != null ? room.getTotalRows() * room.getTotalCols() : null)")
     RoomDto toDto(Room room);
 
     @Mapping(target = "roomType", ignore = true)
+    @Mapping(target = "totalRows", ignore = true)
+    @Mapping(target = "totalCols", ignore = true)
     Room toEntity(RoomDto roomDto);
 }

@@ -258,7 +258,6 @@ public class ShowtimeService {
         Room room = roomRepository.findById(showtimeDto.getRoomId())
                 .orElseThrow(() -> new IllegalArgumentException("Room not found"));
 
-        // Mới thêm
         // Tính toán giờ kết thúc: giờ bắt đầu + thời lượng phim + 15p buffer
         java.time.LocalDateTime endTime = showtimeDto.getStartTime()
                 .plusMinutes(movie.getDuration())
@@ -286,8 +285,6 @@ public class ShowtimeService {
         Showtime saved = showtimeRepository.save(showtime);
         return showtimeMapper.toDto(saved);
     }
-
-    // Mới thêm
 
     @Transactional
     public ShowtimeDto updateShowtime(Integer id, ShowtimeDto showtimeDto) {
@@ -343,12 +340,10 @@ public class ShowtimeService {
         // Hủy/Lỗi/Thành công)
         boolean hasAnyBooking = bookingRepository.existsByShowtimeId(id);
 
+        // Chưa có thao tác đặt vé nào thì xóa vĩnh viễn, còn không thì xóa mềm
         if (!hasAnyBooking) {
-            // Chưa có thao tác đặt vé nào -> Xóa vĩnh viễn (Hard Delete)
             showtimeRepository.delete(showtime);
         } else {
-            // Đã có lịch sử đặt vé -> Chỉ chuyển trạng thái sang CLOSED (Soft Delete) để
-            // bảo toàn dữ liệu đối soát
             showtime.setStatus(ShowtimeStatus.CLOSED);
             showtimeRepository.save(showtime);
         }

@@ -195,8 +195,9 @@ public class MovieService {
     public void deleteMovie(Integer id) {
         Movie movie = findMovieById(id);
         if (showtimeRepository.existsByMovieIdAndStartTimeAfter(id, LocalDateTime.now())) {
-            throw new RuntimeException("Khong the xoa phim vi dang co suat chieu trong tuong lai");
+            throw new RuntimeException("Không thể xóa phim vì đang có suất chiếu trong tương lai");
         }
+
         movie.setStatus(MovieStatus.HIDDEN);
         movieRepository.save(movie);
     }

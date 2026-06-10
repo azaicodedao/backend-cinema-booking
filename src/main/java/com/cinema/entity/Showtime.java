@@ -9,12 +9,9 @@ import java.math.BigDecimal;
 import com.cinema.enums.ShowtimeStatus;
 
 @Entity
-@Table(
-    name = "showtimes",
-    uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"room_id", "start_time"})
-    }
-)
+@Table(name = "showtimes", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "room_id", "start_time" })
+})
 @Getter
 @Setter
 @NoArgsConstructor

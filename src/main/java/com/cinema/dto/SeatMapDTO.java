@@ -11,9 +11,12 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-/**
- * DTO chứa thông tin về sơ đồ ghế ngồi của một phòng chiếu, được dùng để hiển thị khi người dùng chọn chỗ.
+
+/*
+ * DTO chứa thông tin về sơ đồ ghế ngồi của một phòng chiếu, được dùng để hiển
+ * thị khi người dùng chọn chỗ.
  */
+
 public class SeatMapDTO {
     private RoomInfo room;
     private List<SeatInfo> seats;
