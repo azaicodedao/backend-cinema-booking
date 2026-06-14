@@ -28,50 +28,20 @@ public class AdminUserService {
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
 
-    /*
-     * Lấy danh sách người dùng
-     * 
-     * @param keyword: Từ khoá tìm kiếm
-     * 
-     * @param role: Vai trò của người dùng
-     * 
-     * @param status: Trạng thái của người dùng
-     * 
-     * @param pageable: Thông tin phân trang
-     * 
-     * @return Danh sách người dùng
-     */
+    // Lấy danh sách người dùng
     public Page<AdminUserResponse> getUsers(String keyword, Role role, UserStatus status, Pageable pageable) {
         Page<User> users = userRepository.searchUsers(keyword, role, status, pageable);
         return users.map(userMapper::toAdminResponse);
     }
 
-    /**
-     * Lấy thông tin chi tiết của một người dùng cụ thể.
-     * 
-     * @param userId ID của người dùng cần lấy thông tin.
-     * @return AdminUserResponse chứa thông tin chi tiết của người dùng.
-     * @throws IllegalArgumentException nếu không tìm thấy người dùng.
-     */
+    // Lấy thông tin chi tiết của một người dùng cụ thể.
     public AdminUserResponse getUserDetail(Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return userMapper.toAdminResponse(user);
     }
 
-    /*
-     * Thay đổi vai trò của người dùng
-     * 
-     * @param adminId: ID của admin thực hiện thay đổi
-     * 
-     * @param targetUserId: ID của người dùng cần thay đổi quyền
-     * 
-     * @param newRole: Vai trò mới của người dùng
-     * 
-     * @throws IllegalArgumentException nếu adminId và targetUserId trùng nhau hoặc
-     * khô
-     * // g tìm thấy người dùng
-     */
+    // Thay đổi vai trò của người dùng
     @Transactional
     public void changeRole(Integer adminId, Integer targetUserId, Role newRole) {
         if (adminId.equals(targetUserId)) {
@@ -105,16 +75,7 @@ public class AdminUserService {
                 "Changed user role");
     }
 
-    /*
-     * Khoá tài khoản người dùng
-     * 
-     * @param adminId: ID của admin thực hiện khoá
-     * 
-     * @param targetUserId: ID của người dùng cần khoá
-     * 
-     * @throws IllegalArgumentException nếu adminId và targetUserId trùng nhau hoặc
-     * không tìm thấy người dùng
-     */
+    // Khoá tài khoản người dùng
     @Transactional
     public void lockUser(Integer adminId, Integer targetUserId) {
         if (adminId.equals(targetUserId)) {
@@ -136,32 +97,13 @@ public class AdminUserService {
         refreshTokenRepository.deleteByUser_Id(targetUserId);
     }
 
-    /**
-     * Mở khoá tài khoản người dùng
-     *
-     * @param adminId:      ID của admin thực hiện mở khoá
-     * 
-     * @param targetUserId: ID của người dùng cần mở khoá
-     * 
-     * @throws IllegalArgumentException nếu không tìm thấy người dùng
-     */
+    // Mở khoá tài khoản người dùng
     @Transactional
     public void unlockUser(Integer adminId, Integer targetUserId) {
         changeUserStatus(adminId, targetUserId, UserStatus.ACTIVE, "UNLOCK_USER", "Unlocked user account");
     }
 
-    /**
-     * Thay đổi mật khẩu người dùng
-     *
-     * @param adminId:      ID của admin thực hiện thay đổi mật khẩu
-     * 
-     * @param targetUserId: ID của người dùng cần thay đổi mật khẩu
-     * 
-     * @param request:      Thông tin mật khẩu mới
-     * 
-     * @throws IllegalArgumentException nếu mật khẩu mới và xác nhận mật khẩu không
-     *                                  khớp hoặc không tìm thấy người dùng
-     */
+    // Thay đổi mật khẩu người dùng
     @Transactional
     public void changePassword(Integer adminId, Integer targetUserId, AdminChangePasswordRequest request) {
         if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
@@ -177,8 +119,6 @@ public class AdminUserService {
         // Xoá tất cả Refresh Token để bắt buộc người dùng đăng nhập lại với mật khẩu
         // mới
         refreshTokenRepository.deleteByUser_Id(targetUserId);
-        //
-
         auditLogService.logAction(
                 "CHANGE_PASSWORD",
                 adminId,
@@ -188,17 +128,7 @@ public class AdminUserService {
                 "Admin changed user password");
     }
 
-    /**
-     * Thay đổi trạng thái của người dùng
-     * 
-     * @param adminId:      ID của admin thực hiện thay đổi trạng thái
-     * 
-     * @param targetUserId: ID của người dùng cần thay đổi trạng thái
-     * @param newStatus:    Trạng thái mới
-     * @param action:       Hành động
-     * @param description:  Mô tả hành động
-     * @throws IllegalArgumentException nếu không tìm thấy người dùng
-     */
+    // Thay đổi trạng thái của người dùng
     private void changeUserStatus(Integer adminId, Integer targetUserId, UserStatus newStatus, String action,
             String description) {
         User user = userRepository.findById(targetUserId)

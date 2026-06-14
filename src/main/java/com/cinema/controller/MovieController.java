@@ -25,42 +25,28 @@ public class MovieController {
     @Autowired
     private MovieService movieService;
 
-    /**
-     * Lấy danh sách tất cả các phim.
-     * @return Danh sách MovieDto.
-     */
+    // Lấy danh sách các phim
     @GetMapping
     public ResponseEntity<RestResponse<List<MovieDto>>> getAllMovies() {
         List<MovieDto> movies = movieService.getAllMovies();
         return ResponseEntity.ok(RestResponse.success(movies, "Fetched all movies successfully"));
     }
 
-
-//     Lấy danh sách phim nổi bật (để hiển thị trên Carousel).
-//     @return Danh sách MovieItemDTO.
-
+    // Hiển thị danh sách phim nổi bật - Khách hàng.
     @GetMapping("/featured")
     public ResponseEntity<RestResponse<List<MovieItemDTO>>> getFeaturedMovies() {
         List<MovieItemDTO> movies = movieService.getFeaturedMovies();
         return ResponseEntity.ok(RestResponse.success(movies, "Fetched featured movies successfully"));
     }
 
-    /**
-     * Lấy danh sách phim đang chiếu.
-     * 
-     * @return Danh sách MovieItemDTO.
-     */
+    // Lấy danh sách phim đang chiếu.
     @GetMapping("/showing")
     public ResponseEntity<RestResponse<List<MovieItemDTO>>> getShowingMovies() {
         List<MovieItemDTO> movies = movieService.getShowingMovies();
         return ResponseEntity.ok(RestResponse.success(movies, "Fetched now showing movies successfully"));
     }
 
-    /**
-     * Lấy danh sách phim sắp chiếu.
-     * 
-     * @return Danh sách MovieItemDTO.
-     */
+    // Lấy danh sách phim sắp chiếu.
     @GetMapping("/coming-soon")
     public ResponseEntity<RestResponse<List<MovieItemDTO>>> getComingSoonMovies() {
         List<MovieItemDTO> movies = movieService.getComingSoonMovies();
@@ -68,12 +54,7 @@ public class MovieController {
     }
 
     /**
-     * Tìm kiếm và lọc phim theo tên, thể loại và trạng thái.
-     * 
-     * @param title   Tiêu đề phim (tùy chọn).
-     * @param genreId ID thể loại (tùy chọn).
-     * @param status  Trạng thái phim (tùy chọn).
-     * @return Danh sách MovieItemDTO phù hợp tiêu chí.
+     * Tìm kiếm và lọc phim theo tên, thể loại và trạng thái
      */
     @GetMapping("/search")
     public ResponseEntity<RestResponse<List<MovieItemDTO>>> searchMovies(
@@ -84,12 +65,7 @@ public class MovieController {
         return ResponseEntity.ok(RestResponse.success(movies, "Search results fetched successfully"));
     }
 
-    /**
-     * Lấy thông tin cơ bản của một bộ phim theo ID.
-     * 
-     * @param id ID của phim.
-     * @return MovieDto.
-     */
+    // Lấy thông tin cơ bản của một bộ phim theo ID.
     @GetMapping("/{id}")
     public ResponseEntity<RestResponse<MovieDto>> getMovieById(@PathVariable Integer id) {
         try {
@@ -101,12 +77,7 @@ public class MovieController {
         }
     }
 
-    /**
-     * Lấy thông tin chi tiết của một bộ phim (bao gồm đánh giá) theo ID.
-     * 
-     * @param id ID của phim.
-     * @return MovieDetailDTO.
-     */
+    // Lấy thông tin chi tiết của một bộ phim (bao gồm đánh giá) theo ID.
     @GetMapping("/{id}/detail")
     public ResponseEntity<RestResponse<MovieDetailDTO>> getMovieDetail(@PathVariable Integer id) {
         try {
@@ -118,12 +89,7 @@ public class MovieController {
         }
     }
 
-    /**
-     * Tạo phim mới (Yêu cầu quyền ADMIN).
-     * 
-     * @param movieDto Dữ liệu phim.
-     * @return MovieDto đã tạo.
-     */
+    // Tạo phim mới (Yêu cầu quyền ADMIN).
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<RestResponse<MovieDto>> createMovie(@RequestBody MovieDto movieDto) {
@@ -154,7 +120,8 @@ public class MovieController {
     /**
      * Xóa phim (chuyển sang trạng thái HIDDEN - Yêu cầu quyền ADMIN).
      * 
-     // @param id của phim
+     * // @param id của phim
+     * 
      * @return Không có nội dung trả về.
      */
     @DeleteMapping("/{id}")
@@ -171,10 +138,8 @@ public class MovieController {
 
     /**
      * Tải ảnh poster phim lên Cloudinary (Yêu cầu quyền ADMIN).
-     * 
-     * @param id   ID của phim.
-     * @param file File ảnh.
-     * @return Không có nội dung trả về.
+     * ID của phim.
+     * file File ảnh.
      */
     @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('ADMIN')")

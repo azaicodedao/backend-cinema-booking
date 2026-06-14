@@ -125,6 +125,14 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
         @Query("SELECT s.id FROM Showtime s WHERE s.status = com.cinema.enums.ShowtimeStatus.OPEN AND s.endTime <= :now")
         List<Integer> findExpiredShowtimeIds(@Param("now") LocalDateTime now);
 
+        @Query("""
+            SELECT COUNT(s) > 0 FROM Showtime s
+            WHERE s.room.id = :roomId
+            AND s.status = com.cinema.enums.ShowtimeStatus.OPEN
+            AND s.endTime > :now
+        """)
+        boolean existsActiveShowtimesByRoomId(@Param("roomId") Integer roomId, @Param("now") LocalDateTime now);
+
         @org.springframework.data.jpa.repository.Modifying
         @org.springframework.data.jpa.repository.Query("""
                             UPDATE Showtime s

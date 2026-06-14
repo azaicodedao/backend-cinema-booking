@@ -35,58 +35,42 @@ public class MovieService {
     MoviePosterService moviePosterService;
     MovieRatingService movieRatingService;
 
-    /**
-     * Lấy tất cả các phim
-     * 
-     * @return danh sách các phim
-     */
+    // Chuyển đổi sang MovieItemDTO với rating
+    private MovieItemDTO toItemDtoWithRating(Movie movie) {
+        MovieItemDTO dto = movieMapper.toItemDto(movie);
+        movieRatingService.enrich(dto, movie.getId());
+        return dto;
+    }
+
+    // Lấy tất cả các phim
     public List<MovieDto> getAllMovies() {
         return movieRepository.findAll().stream()
-                .map(movieMapper::toDto)
+                .map(movie -> movieMapper.toDto(movie))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy danh sách các phim nổi bật
-     * 
-     * @return danh sách các phim nổi bật
-     */
+    // Lấy danh sách các phim nổi bật
     public List<MovieItemDTO> getFeaturedMovies() {
         return movieRepository.findByIsFeatured(true).stream()
-                .map(this::toItemDtoWithRating)
+                .map(movie -> this.toItemDtoWithRating(movie))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy danh sách các phim đang chiếu
-     * 
-     * @return danh sách các phim đang chiếu
-     */
+    // Lấy danh sách các phim đang chiếu
     public List<MovieItemDTO> getShowingMovies() {
         return movieRepository.findByStatus(MovieStatus.SHOWING).stream()
-                .map(this::toItemDtoWithRating)
+                .map(movie -> this.toItemDtoWithRating(movie))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy danh sách các phim sắp chiếu
-     * 
-     * @return danh sách các phim sắp chiếu
-     */
+    // Lấy danh sách các phim sắp chiếu
     public List<MovieItemDTO> getComingSoonMovies() {
         return movieRepository.findByStatus(MovieStatus.COMING).stream()
-                .map(this::toItemDtoWithRating)
+                .map(movie -> this.toItemDtoWithRating(movie))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Tìm kiếm phim
-     * 
-     * @param title   tiêu đề phim
-     * @param genreId ID của thể loại
-     * @param status  trạng thái
-     * @return danh sách các phim tìm thấy
-     */
+    // Tìm kiếm phim
     public List<MovieItemDTO> searchMovies(String title, Integer genreId, MovieStatus status) {
         List<Movie> movies;
         if (status != null) {
@@ -113,16 +97,22 @@ public class MovieService {
             }
         }
         return movies.stream()
-                .map(this::toItemDtoWithRating)
+                .map(movie -> this.toItemDtoWithRating(movie))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy thông tin chi tiết phim
-     * 
-     * @param id ID của phim
-     * @return thông tin chi tiết phim
-     */
+    // Tìm phim theo ID
+    private Movie findMovieById(Integer id) {
+        return movieRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Movie not found"));
+    }
+
+    // Lấy thông tin cơ bản của phim theo ID
+    public MovieDto getMovieById(Integer id) {
+        return movieMapper.toDto(findMovieById(id));
+    }
+
+    // Lấy thông tin chi tiết phim
     public MovieDetailDTO getMovieDetail(Integer id) {
         Movie movie = findMovieById(id);
         MovieDetailDTO dto = movieMapper.toDetailDto(movie);
@@ -130,26 +120,34 @@ public class MovieService {
         return dto;
     }
 
-    /**
-     * Lấy thông tin phim theo ID
-     * 
-     * @param id ID của phim
-     * @return thông tin phim
-     */
-    public MovieDto getMovieById(Integer id) {
-        return movieMapper.toDto(findMovieById(id));
+    // Gán thể loại cho phim
+    private void applyGenres(Movie movie, MovieDto movieDto) {
+        if (movieDto.getGenres() == null) {
+            return;
+        }
+        List<Genre> genres = genreRepository.findAllById(
+                movieDto.getGenres().stream()
+                        .map(GenreDto::getId)
+                        .collect(Collectors.toList()));
+        movie.setGenres(genres);
     }
 
-    /**
-     * Tạo phim mới
-     * 
-     * @param movieDto thông tin phim
-     * @return phim đã tạo
-     */
+    private void applyPosterUpdate(Movie movie, MovieDto movieDto) {
+        if (movieDto.getPosterUrl() == null)
+            return;
+
+        String posterUrl = movieDto.getPosterUrl().isBlank() ? null : movieDto.getPosterUrl();
+        movie.setPosterUrl(posterUrl);
+    }
+
+    // Tạo phim mới
     @Transactional
     public MovieDto createMovie(MovieDto movieDto) {
         Movie movie = movieMapper.toEntity(movieDto);
-        movie.setStatus(movieDto.getStatus() != null ? MovieStatus.valueOf(movieDto.getStatus()) : MovieStatus.SHOWING);
+        movie.setStatus(
+                movieDto.getStatus() != null
+                        ? MovieStatus.valueOf(movieDto.getStatus())
+                        : MovieStatus.SHOWING);
         movie.setIsFeatured(movieDto.getIsFeatured() != null ? movieDto.getIsFeatured() : false);
         movie.setPosterUrl(movieDto.getPosterUrl());
         applyGenres(movie, movieDto);
@@ -158,13 +156,7 @@ public class MovieService {
         return movieMapper.toDto(saved);
     }
 
-    /**
-     * Sửa đổi phim
-     * 
-     * @param id       ID của phim
-     * @param movieDto thông tin phim
-     * @return phim đã sửa
-     */
+    // Sửa đổi phim
     @Transactional
     public MovieDto updateMovie(Integer id, MovieDto movieDto) {
         Movie movie = findMovieById(id);
@@ -178,19 +170,15 @@ public class MovieService {
         applyPosterUpdate(movie, movieDto);
 
         Movie saved = movieRepository.save(movie);
-        String newPosterUrl = saved.getPosterUrl();
-        if (oldPosterUrl != null && !oldPosterUrl.equals(newPosterUrl)) {
+        String newPosterUrl = saved.getPosterUrl(); // Lấy URL poster mới sau khi lưu
+        if (oldPosterUrl != null && !oldPosterUrl.equals(newPosterUrl)) { // Xóa URL poster cũ nếu có trong DB
             moviePosterService.cleanupOldPosterAfterCommit(oldPosterUrl);
         }
 
         return movieMapper.toDto(saved);
     }
 
-    /**
-     * Xóa phim
-     * 
-     * @param id ID của phim
-     */
+    // Xóa phim
     @Transactional
     public void deleteMovie(Integer id) {
         Movie movie = findMovieById(id);
@@ -202,12 +190,7 @@ public class MovieService {
         movieRepository.save(movie);
     }
 
-    /**
-     * Tải lên poster phim
-     * 
-     * @param id   ID của phim
-     * @param file file poster
-     */
+    // Tải poster lên phim
     @Transactional
     public void uploadMoviePoster(Integer id, MultipartFile file) {
         Movie movie = findMovieById(id);
@@ -222,58 +205,9 @@ public class MovieService {
         }
     }
 
-    /**
-     * Lấy ảnh poster phim
-     * 
-     * @param id ID của phim
-     * @return ảnh poster phim
-     */
+    // Lấy ảnh poster phim
     public byte[] getMoviePoster(Integer id) {
         return new byte[0];
     }
 
-    /**
-     * Tìm phim theo ID
-     * 
-     * @param id ID của phim
-     * @return phim
-     * @throws RuntimeException nếu phim không tồn tại
-     */
-    private Movie findMovieById(Integer id) {
-        return movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
-    }
-
-    /**
-     * Gán thể loại cho phim
-     * 
-     * @param movie    phim
-     * @param movieDto thông tin phim
-     */
-    private void applyGenres(Movie movie, MovieDto movieDto) {
-        if (movieDto.getGenres() == null) {
-            return;
-        }
-
-        List<Genre> genres = genreRepository.findAllById(
-                movieDto.getGenres().stream()
-                        .map(GenreDto::getId)
-                        .collect(Collectors.toList()));
-        movie.setGenres(genres);
-    }
-
-    private void applyPosterUpdate(Movie movie, MovieDto movieDto) {
-        if (movieDto.getPosterUrl() == null) {
-            return;
-        }
-
-        String posterUrl = movieDto.getPosterUrl().isBlank() ? null : movieDto.getPosterUrl();
-        movie.setPosterUrl(posterUrl);
-    }
-
-    private MovieItemDTO toItemDtoWithRating(Movie movie) {
-        MovieItemDTO dto = movieMapper.toItemDto(movie);
-        movieRatingService.enrich(dto, movie.getId());
-        return dto;
-    }
 }

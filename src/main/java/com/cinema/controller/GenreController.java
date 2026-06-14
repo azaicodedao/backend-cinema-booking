@@ -53,7 +53,7 @@ public class GenreController {
             return ResponseEntity.ok(RestResponse.success(null, "Đã xóa thể loại thành công"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(RestResponse.error(400, "Lỗi khi xóa", e.getMessage()));
+                    .body(RestResponse.error(400, "Lỗi khi xóa thể loại", e.getMessage()));
         }
     }
 }

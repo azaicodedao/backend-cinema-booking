@@ -19,12 +19,7 @@ public class MovieRatingService {
 
     ReviewRepository reviewRepository;
 
-    /**
-     * Thêm thông tin đánh giá vào thẻ phim trang chủ
-     * 
-     * @param dto     DTO chứa thông tin phim
-     * @param movieId ID của phim
-     */
+    // Thêm thông tin đánh giá vào thẻ phim trang chủ
     public void enrich(MovieItemDTO dto, Integer movieId) {
         RatingSummary summary = getSummary(movieId);
         dto.setAverageRating(summary.averageRating());
@@ -32,12 +27,7 @@ public class MovieRatingService {
         dto.setRatingDistribution(summary.ratingDistribution());
     }
 
-    /**
-     * Thêm thông tin đánh giá vào trang chi tiết phim
-     * 
-     * @param dto     DTO chứa thông tin phim
-     * @param movieId ID của phim
-     */
+    // Thêm thông tin đánh giá vào trang chi tiết phim
     public void enrich(MovieDetailDTO dto, Integer movieId) {
         RatingSummary summary = getSummary(movieId);
         dto.setAverageRating(summary.averageRating());
@@ -45,12 +35,7 @@ public class MovieRatingService {
         dto.setRatingDistribution(summary.ratingDistribution());
     }
 
-    /**
-     * Lấy thông tin đánh giá phục vụ cho trang đánh giá phim
-     * 
-     * @param movieId ID của phim
-     * @return DTO chứa thông tin đánh giá
-     */
+    // Lấy thông tin đánh giá phục vụ cho trang đánh giá phim
     private RatingSummary getSummary(Integer movieId) {
         Double avg = reviewRepository.getAverageRatingByMovieId(movieId);
         Long count = reviewRepository.getReviewCountByMovieId(movieId);

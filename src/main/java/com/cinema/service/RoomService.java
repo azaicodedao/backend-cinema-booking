@@ -69,6 +69,10 @@ public class RoomService {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + roomId));
 
+        if (showtimeRepository.existsActiveShowtimesByRoomId(roomId, java.time.LocalDateTime.now())) {
+            throw new RuntimeException("Không thể thay đổi loại ghế khi phòng đang có suất chiếu được lên lịch.");
+        }
+
         for (SeatDto dto : seatDtos) {
             Seat seat = seatRepository.findById(dto.getId())
                     .orElseThrow(() -> new RuntimeException("Seat not found"));
@@ -113,6 +117,11 @@ public class RoomService {
 
         // Thiết lập trạng thái mặc định là ACTIVE
         room.setStatus(com.cinema.enums.RoomStatus.ACTIVE);
+
+        if (roomDto.getTotalRows() != null)
+            room.setTotalRows(roomDto.getTotalRows());
+        if (roomDto.getTotalCols() != null)
+            room.setTotalCols(roomDto.getTotalCols());
 
         Room savedRoom = roomRepository.save(room);
 

@@ -1,6 +1,5 @@
 package com.cinema.service;
 
-
 import com.cinema.service.Cloudinary.CloudinaryService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -20,14 +19,8 @@ public class MoviePosterService {
 
     CloudinaryService cloudinaryService;
 
-
-
     /**
-     * Upload ảnh poster
-     * 
-     * @param file ảnh poster
-     * @return URL ảnh poster
-     * @throws IOException
+     * Upload ảnh poster, tham số file ảnh poster, trả về URL ảnh poster
      */
     public String uploadPoster(MultipartFile file) throws IOException {
         return cloudinaryService.uploadImage(file);

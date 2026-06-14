@@ -302,8 +302,8 @@ public class StatisticService {
      * Chuyển đổi dữ liệu Object thô sang kiểu Long an toàn.
      * Thường dùng để lấy tổng số lượng đặt vé thô từ hàm SUM/COUNT của SQL.
      *
-     * @param obj Đối tượng số lượng thô
-     * @return Giá trị Long tương ứng hoặc 0L nếu null/không hợp lệ
+     * obj Đối tượng số lượng thô
+     * trả về giá trị Long tương ứng hoặc 0L nếu null/không hợp lệ
      */
     private Long toLong(Object obj) {
         if (obj instanceof Number number) {
