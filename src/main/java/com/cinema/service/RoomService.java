@@ -18,6 +18,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -69,6 +70,11 @@ public class RoomService {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + roomId));
 
+        // kiểm tra xem có suất chiếu nào đang mở trong phòng không
+        if (showtimeRepository.existsActiveShowtimesByRoomId(roomId, LocalDateTime.now())) {
+            throw new RuntimeException("Không thể thay đổi loại ghế khi phòng đang có suất chiếu đang mở");
+        }
+
         for (SeatDto dto : seatDtos) {
             Seat seat = seatRepository.findById(dto.getId())
                     .orElseThrow(() -> new RuntimeException("Seat not found"));
@@ -113,6 +119,12 @@ public class RoomService {
 
         // Thiết lập trạng thái mặc định là ACTIVE
         room.setStatus(com.cinema.enums.RoomStatus.ACTIVE);
+
+        // Kiểm tra nếu có thông tin rows/cols được gửi lên từ client
+        if (roomDto.getTotalRows() != null && roomDto.getTotalCols() != null) {
+            room.setTotalRows(roomDto.getTotalRows());
+            room.setTotalCols(roomDto.getTotalCols());
+        }
 
         Room savedRoom = roomRepository.save(room);
 

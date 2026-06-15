@@ -17,119 +17,134 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
 
-        List<Showtime> findByMovieId(Integer movieId);
+    List<Showtime> findByMovieId(Integer movieId);
 
-        List<Showtime> findByShowDateIsNull();
+    List<Showtime> findByShowDateIsNull();
 
-        boolean existsByRoomId(Integer roomId);
+    boolean existsByRoomId(Integer roomId);
 
-        /**
-         * Lấy tất cả suất chiếu của một ngày cụ thể, sắp xếp theo giờ bắt đầu tăng dần
-         * dùng cho hiển thị lịch chiếu theo ngày.
-         */
-        List<Showtime> findByShowDateOrderByStartTimeAsc(LocalDate showDate);
+    /**
+     * Lấy tất cả suất chiếu của một ngày cụ thể, sắp xếp theo giờ bắt đầu tăng dần
+     * dùng cho hiển thị lịch chiếu theo ngày.
+     */
+    List<Showtime> findByShowDateOrderByStartTimeAsc(LocalDate showDate);
 
-        /**
-         * Lấy tất cả các suất chiếu từ một ngày nhất định trở đi dùng cho bộ lọc suất
-         * chiếu
-         */
-        List<Showtime> findByShowDateGreaterThanEqualOrderByStartTimeAsc(LocalDate startDate);
+    /**
+     * Lấy tất cả các suất chiếu từ một ngày nhất định trở đi dùng cho bộ lọc suất
+     * chiếu
+     */
+    List<Showtime> findByShowDateGreaterThanEqualOrderByStartTimeAsc(LocalDate startDate);
 
-        /**
-         * Lấy tất cả các suất chiếu có trạng thái OPEN và thời gian bắt đầu sau một
-         * thời điểm nhất định dùng cho bộ lọc suất chiếu
-         */
-        List<Showtime> findByStatusAndStartTimeAfterOrderByStartTimeAsc(
-                        ShowtimeStatus status,
-                        LocalDateTime startTime);
+    /**
+     * Lấy tất cả các suất chiếu có trạng thái OPEN và thời gian bắt đầu sau một
+     * thời điểm nhất định dùng cho bộ lọc suất chiếu
+     */
+    List<Showtime> findByStatusAndStartTimeAfterOrderByStartTimeAsc(
+            ShowtimeStatus status,
+            LocalDateTime startTime);
 
-        /**
-         * Lấy tất cả các suất chiếu có trạng thái OPEN và thời gian bắt đầu sau một
-         * thời điểm nhất định và ngày bắt đầu sau một ngày nhất định dùng cho bộ lọc
-         * suất chiếu
-         */
-        List<Showtime> findByStatusAndShowDateAndStartTimeAfterOrderByStartTimeAsc(
-                        ShowtimeStatus status,
-                        LocalDate showDate,
-                        LocalDateTime startTime);
+    /**
+     * Lấy tất cả các suất chiếu có trạng thái OPEN và thời gian bắt đầu sau một
+     * thời điểm nhất định và ngày bắt đầu sau một ngày nhất định dùng cho bộ lọc
+     * suất chiếu
+     */
+    List<Showtime> findByStatusAndShowDateAndStartTimeAfterOrderByStartTimeAsc(
+            ShowtimeStatus status,
+            LocalDate showDate,
+            LocalDateTime startTime);
 
-        /**
-         * Đếm số ghế còn trống của một suất chiếu dựa trên tổng ghế của phòng
-         * trừ đi số ghế đã được book (trạng thái CONFIRMED).
-         */
-        @Query("""
-                            SELECT (r.totalRows * r.totalCols) - COUNT(b.id)
-                            FROM Showtime s
-                            JOIN s.room r
-                            LEFT JOIN Booking b ON b.showtime.id = s.id AND b.status = 'CONFIRMED'
-                            WHERE s.id = :showtimeId
-                            GROUP BY r.totalRows, r.totalCols
-                        """)
-        Integer countAvailableSeats(@Param("showtimeId") Integer showtimeId);
+    /**
+     * Đếm số ghế còn trống của một suất chiếu dựa trên tổng ghế của phòng
+     * trừ đi số ghế đã được book (trạng thái CONFIRMED).
+     */
+    @Query("""
+                SELECT (r.totalRows * r.totalCols) - COUNT(b.id)
+                FROM Showtime s
+                JOIN s.room r
+                LEFT JOIN Booking b ON b.showtime.id = s.id AND b.status = 'CONFIRMED'
+                WHERE s.id = :showtimeId
+                GROUP BY r.totalRows, r.totalCols
+            """)
+    Integer countAvailableSeats(@Param("showtimeId") Integer showtimeId);
 
-        boolean existsByMovieIdAndStartTimeAfter(Integer movieId, LocalDateTime now);
+    // Kiểm tra xem còn suất chiếu nào của phim sau thời điểm hiện tại không
+    boolean existsByMovieIdAndStartTimeAfter(Integer movieId, LocalDateTime now);
 
-        @Query("""
-                        SELECT COUNT(s) > 0 FROM Showtime s
-                        WHERE s.room.id = :roomId
-                        AND s.startTime < :endTime
-                        AND s.endTime > :startTime
-                        AND s.status != 'CLOSED'
-                        """)
-        boolean hasConflict(
-                        @Param("roomId") Integer roomId,
-                        @Param("startTime") LocalDateTime startTime,
-                        @Param("endTime") LocalDateTime endTime);
+    // Kiểm tra xung đột suất chiếu
+    @Query("""
+            SELECT COUNT(s) > 0 FROM Showtime s
+            WHERE s.room.id = :roomId
+            AND s.startTime < :endTime
+            AND s.endTime > :startTime
+            AND s.status != 'CLOSED'
+            """)
+    boolean hasConflict(
+            @Param("roomId") Integer roomId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 
-        @Query("""
-                        SELECT COUNT(s) > 0 FROM Showtime s
-                        WHERE s.room.id = :roomId
-                        AND s.id != :showtimeId
-                        AND s.startTime < :endTime
-                        AND s.endTime > :startTime
-                        AND s.status != 'CLOSED'
-                        """)
-        boolean hasConflictExcludeId(
-                        @Param("roomId") Integer roomId,
-                        @Param("showtimeId") Integer showtimeId,
-                        @Param("startTime") LocalDateTime startTime,
-                        @Param("endTime") LocalDateTime endTime);
+    // Kiểm tra xung đột suất chiếu (loại trừ suất chiếu hiện tại)
+    @Query("""
+            SELECT COUNT(s) > 0 FROM Showtime s
+            WHERE s.room.id = :roomId
+            AND s.id != :showtimeId
+            AND s.startTime < :endTime
+            AND s.endTime > :startTime
+            AND s.status != 'CLOSED'
+            """)
+    boolean hasConflictExcludeId(
+            @Param("roomId") Integer roomId,
+            @Param("showtimeId") Integer showtimeId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 
-        @Query("""
-                        SELECT new com.cinema.dto.ShowtimeStatDto(
-                            s.id,
-                            m.title,
-                            r.name,
-                            s.startTime,
-                            CAST((r.totalRows * r.totalCols) AS long),
-                            (SELECT COUNT(t) FROM Ticket t JOIN t.booking b WHERE b.showtime.id = s.id AND b.status = 'CONFIRMED'),
-                            COALESCE((SELECT SUM(b.totalPrice) FROM Booking b WHERE b.showtime.id = s.id AND b.status = 'CONFIRMED'), 0)
-                        )
-                        FROM Showtime s
-                        JOIN s.movie m
-                        JOIN s.room r
-                        WHERE s.endTime < :now
-                        AND (:movieId IS NULL OR m.id = :movieId)
-                        AND (:roomId IS NULL OR r.id = :roomId)
-                        AND (:startDate IS NULL OR s.startTime >= :startDate)
-                        AND (:endDate IS NULL OR s.startTime <= :endDate)
-                        """)
-        Page<com.cinema.dto.ShowtimeStatDto> getShowtimeStats(
-                        @Param("now") LocalDateTime now,
-                        @Param("movieId") Integer movieId,
-                        @Param("roomId") Integer roomId,
-                        @Param("startDate") LocalDateTime startDate,
-                        @Param("endDate") LocalDateTime endDate,
-                        Pageable pageable);
+    // Lấy tất cả các suất chiếu đã hết hạn
+    @Query("""
+            SELECT new com.cinema.dto.ShowtimeStatDto(
+                s.id,
+                m.title,
+                r.name,
+                s.startTime,
+                CAST((r.totalRows * r.totalCols) AS long),
+                (SELECT COUNT(t) FROM Ticket t JOIN t.booking b WHERE b.showtime.id = s.id AND b.status = 'CONFIRMED'),
+                COALESCE((SELECT SUM(b.totalPrice) FROM Booking b WHERE b.showtime.id = s.id AND b.status = 'CONFIRMED'), 0)
+            )
+            FROM Showtime s
+            JOIN s.movie m
+            JOIN s.room r
+            WHERE s.endTime < :now
+            AND (:movieId IS NULL OR m.id = :movieId)
+            AND (:roomId IS NULL OR r.id = :roomId)
+            AND (:startDate IS NULL OR s.startTime >= :startDate)
+            AND (:endDate IS NULL OR s.startTime <= :endDate)
+            """)
+    Page<com.cinema.dto.ShowtimeStatDto> getShowtimeStats(
+            @Param("now") LocalDateTime now,
+            @Param("movieId") Integer movieId,
+            @Param("roomId") Integer roomId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable);
 
-        @Query("SELECT s.id FROM Showtime s WHERE s.status = com.cinema.enums.ShowtimeStatus.OPEN AND s.endTime <= :now")
-        List<Integer> findExpiredShowtimeIds(@Param("now") LocalDateTime now);
+    // Lấy tất cả ID suất chiếu đã hết hạn
+    @Query("SELECT s.id FROM Showtime s WHERE s.status = com.cinema.enums.ShowtimeStatus.OPEN AND s.endTime <= :now")
+    List<Integer> findExpiredShowtimeIds(@Param("now") LocalDateTime now);
 
-        @org.springframework.data.jpa.repository.Modifying
-        @org.springframework.data.jpa.repository.Query("""
-                            UPDATE Showtime s
-                            SET s.status = com.cinema.enums.ShowtimeStatus.CLOSED
-                            WHERE s.id IN :ids
-                        """)
-        int closeShowtimesByIds(@Param("ids") List<Integer> ids);
+    // kiểm tra xem còn suất chiếu nào đang mở trong phòng không
+    @Query("""
+                SELECT COUNT(s) > 0 FROM Showtime s
+                WHERE s.room.id = :roomId
+                AND s.status = com.cinema.enums.ShowtimeStatus.OPEN
+                AND s.endTime > :now
+            """)
+    boolean existsActiveShowtimesByRoomId(@Param("roomId") Integer roomId, @Param("now") LocalDateTime now);
+
+    // đóng suất chiếu đã hết hạn
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("""
+                UPDATE Showtime s
+                SET s.status = com.cinema.enums.ShowtimeStatus.CLOSED
+                WHERE s.id IN :ids
+            """)
+    int closeShowtimesByIds(@Param("ids") List<Integer> ids);
 }
